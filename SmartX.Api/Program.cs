@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Application services
 builder.Services.AddSingleton<SensorStore>();
+builder.Services.AddSingleton<DeploymentTreeValidator>();
 
 // Controllers and JSON
 // The client sends category names, not numbers, so enums need to bind from strings.

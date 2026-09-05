@@ -45,6 +45,14 @@ namespace SmartX.Api.Services
             _sensors.TryGetValue(macAddress.ToUpperInvariant(), out var sensor);
             return sensor;
         }
+
+        //..............................................................................//
+
+        //checks whether a mac address belongs to a registered sensor
+        public bool IsRegistered(string macAddress)
+        {
+            return Find(macAddress) != null;
+        }
     }
 }
 

@@ -1,11 +1,169 @@
 @page "/ingestion/sensors"
+@inject HttpClient Http
 
 <PageTitle>Sensors - Smart-X</PageTitle>
 
 <h2>Sensors</h2>
 
-<div class="card">
-    <div class="card-body text-center text-muted py-5">
-        No sensors registered yet.
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Register a sensor</h5>
+
+        <EditForm Model="_newSensor" OnValidSubmit="RegisterAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            @if (_registerSucceeded)
+            {
+                <div class="alert alert-success">Sensor registered.</div>
+            }
+            @if (_registerError != null)
+            {
+                <div class="alert alert-danger">@_registerError</div>
+            }
+
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Mac Address</label>
+                    <InputText class="form-control" @bind-Value="_newSensor.MacAddress" placeholder="AA:BB:CC:DD:EE:FF" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Zone</label>
+                    <InputText class="form-control" @bind-Value="_newSensor.Location.Zone" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Room</label>
+                    <InputText class="form-control" @bind-Value="_newSensor.Location.Room" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Node Id</label>
+                    <InputText class="form-control" @bind-Value="_newSensor.Location.NodeId" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Category</label>
+                    <InputSelect class="form-select" @bind-Value="_newSensor.Category">
+                        @foreach (var category in Enum.GetValues<SensorCategory>())
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </InputSelect>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3" disabled="@_isSubmitting">
+                @(_isSubmitting ? "Registering..." : "Register")
+            </button>
+        </EditForm>
     </div>
 </div>
+
+@if (_loadFailed)
+{
+    <div class="alert alert-danger">
+        Could not reach the gateway API. Make sure SmartX.Api is running.
+    </div>
+}
+else if (_sensors == null)
+{
+    <p class="text-muted">Loading...</p>
+}
+else if (_sensors.Count == 0)
+{
+    <div class="card">
+        <div class="card-body text-center text-muted py-5">
+            No sensors registered yet.
+        </div>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Mac Address</th>
+                    <th>Zone</th>
+                    <th>Room</th>
+                    <th>Node</th>
+                    <th>Category</th>
+                    <th>Registered</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var sensor in _sensors)
+                {
+                    <tr>
+                        <td>@sensor.MacAddress</td>
+                        <td>@sensor.Location.Zone</td>
+                        <td>@sensor.Location.Room</td>
+                        <td>@sensor.Location.NodeId</td>
+                        <td>@sensor.Category</td>
+                        <td>@sensor.RegisteredAt.ToLocalTime().ToString("g")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<SensorRegistration>? _sensors;
+    private bool _loadFailed;
+
+    private SensorRegistration _newSensor = new();
+    private bool _isSubmitting;
+    private bool _registerSucceeded;
+    private string? _registerError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSensorsAsync();
+    }
+
+    private async Task LoadSensorsAsync()
+    {
+        try
+        {
+            _sensors = await Http.GetFromJsonAsync<List<SensorRegistration>>("api/sensors");
+        }
+        catch (HttpRequestException)
+        {
+            _loadFailed = true;
+        }
+    }
+
+    private async Task RegisterAsync()
+    {
+        _isSubmitting = true;
+        _registerSucceeded = false;
+        _registerError = null;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/sensors", _newSensor);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _registerSucceeded = true;
+                _newSensor = new SensorRegistration();
+                await LoadSensorsAsync();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                _registerError = await response.Content.ReadAsStringAsync();
+            }
+            else
+            {
+                _registerError = "The gateway rejected that registration.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            _registerError = "Could not reach the gateway API.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}

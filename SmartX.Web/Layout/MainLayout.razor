@@ -1,3 +1,42 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
-@Body
+<nav class="navbar navbar-expand-md navbar-light bg-light border-bottom mb-4">
+    <div class="container">
+        <a class="navbar-brand fw-semibold" href="/">Smart-X</a>
+        <button class="navbar-toggler" type="button" @onclick="ToggleNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse @(_isNavExpanded ? "show" : "")">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="ingestion/sensors" title="Sensor Data Ingestion and Telemetry">
+                        Ingestion
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <span class="nav-link disabled" title="Real-Time Command Stream and History">
+                        Command Stream
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <span class="nav-link disabled" title="Network Topology and Mesh Routing">
+                        Topology
+                    </span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<main class="container">
+    @Body
+</main>
+
+@code {
+    private bool _isNavExpanded;
+
+    private void ToggleNav()
+    {
+        _isNavExpanded = !_isNavExpanded;
+    }
+}

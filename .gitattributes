@@ -1,0 +1,43 @@
+# ---------------------------------------------------------------
+# Line-ending normalisation for Smart-X
+#
+# Without this file, line-ending behaviour depends on each machine's local Git
+# configuration. That is a problem for this repo specifically, because it mixes a
+# .NET toolchain (Windows) with Linux Docker builds. The usual symptom is a diff
+# where an entire file appears changed when nothing was edited.
+# ---------------------------------------------------------------
+
+# Default: detect text files and store them with LF in the repository.
+# Working-copy line endings still follow the platform, so nothing changes for you locally.
+* text=auto
+
+# Windows tooling is happiest with CRLF
+*.sln       text eol=crlf
+*.slnx      text eol=crlf
+*.csproj    text eol=crlf
+*.props     text eol=crlf
+*.targets   text eol=crlf
+*.ps1       text eol=crlf
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+*.razor     text eol=crlf
+*.css       text eol=crlf
+
+# These MUST stay LF. A Dockerfile or shell script with CRLF line endings
+# fails inside a Linux container, and the error message is famously unhelpful.
+Dockerfile  text eol=lf
+*.sh        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+# Binary files - never normalise these, it corrupts them
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.woff      binary
+*.woff2     binary
+*.dll       binary
+*.pfx       binary

@@ -1,3 +1,50 @@
 @SmartX.Api_HostAddress = https://localhost:7002
 
-###
+### register an environmental sensor
+POST {{SmartX.Api_HostAddress}}/api/sensors
+Content-Type: application/json
+
+{
+  "macAddress": "AA:BB:CC:DD:EE:01",
+  "location": { "zone": "Zone 1", "room": "Sub-Zone B", "nodeId": "N01" },
+  "category": "Environmental"
+}
+
+### register a power consumption sensor
+POST {{SmartX.Api_HostAddress}}/api/sensors
+Content-Type: application/json
+
+{
+  "macAddress": "AA:BB:CC:DD:EE:02",
+  "location": { "zone": "Zone 1", "room": "Facility A", "nodeId": "N02" },
+  "category": "PowerConsumption"
+}
+
+### registering the same mac again should 409
+POST {{SmartX.Api_HostAddress}}/api/sensors
+Content-Type: application/json
+
+{
+  "macAddress": "aa:bb:cc:dd:ee:01",
+  "location": { "zone": "Zone 1", "room": "Sub-Zone B", "nodeId": "N01" },
+  "category": "Environmental"
+}
+
+### a malformed mac address should 400
+POST {{SmartX.Api_HostAddress}}/api/sensors
+Content-Type: application/json
+
+{
+  "macAddress": "not-a-mac",
+  "location": { "zone": "Zone 1", "room": "Sub-Zone B", "nodeId": "N03" },
+  "category": "Actuator"
+}
+
+### list every registered sensor
+GET {{SmartX.Api_HostAddress}}/api/sensors
+
+### look up a sensor that exists
+GET {{SmartX.Api_HostAddress}}/api/sensors/AA:BB:CC:DD:EE:01
+
+### look up a mac that was never registered, should 404
+GET {{SmartX.Api_HostAddress}}/api/sensors/00:00:00:00:00:00

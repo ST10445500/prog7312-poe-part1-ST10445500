@@ -1,0 +1,26 @@
+@if (Node.IsSensor)
+{
+    <div>
+        <span>@Node.Name</span>
+        <code class="ms-2">@Node.SensorMacAddress</code>
+    </div>
+}
+else
+{
+    <div class="fw-semibold">@Node.Name</div>
+}
+
+@if (Node.Children.Count > 0)
+{
+    <div class="ms-3 border-start ps-3">
+        @foreach (var child in Node.Children)
+        {
+            <DeploymentTreeNode @key="child" Node="child" />
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public DeploymentNode Node { get; set; } = null!;
+}

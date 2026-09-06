@@ -48,3 +48,48 @@ GET {{SmartX.Api_HostAddress}}/api/sensors/AA:BB:CC:DD:EE:01
 
 ### look up a mac that was never registered, should 404
 GET {{SmartX.Api_HostAddress}}/api/sensors/00:00:00:00:00:00
+
+### a valid deployment tree with one registered sensor leaf, should be valid
+POST {{SmartX.Api_HostAddress}}/api/deployment/validate
+Content-Type: application/json
+
+{
+  "name": "Zone 1",
+  "children": [
+    {
+      "name": "Sub-Zone B",
+      "children": [
+        { "name": "Moisture Sensor 01", "sensorMacAddress": "AA:BB:CC:DD:EE:01" }
+      ]
+    }
+  ]
+}
+
+### a tree pointing at a sensor that was never registered
+POST {{SmartX.Api_HostAddress}}/api/deployment/validate
+Content-Type: application/json
+
+{
+  "name": "Zone 1",
+  "children": [
+    { "name": "Ghost Sensor", "sensorMacAddress": "FF:FF:FF:FF:FF:FF" }
+  ]
+}
+
+### two siblings sharing a name should be reported
+POST {{SmartX.Api_HostAddress}}/api/deployment/validate
+Content-Type: application/json
+
+{
+  "name": "Zone 1",
+  "children": [
+    { "name": "Sub-Zone B" },
+    { "name": "sub-zone b" }
+  ]
+}
+
+### a malformed body should 400, not 500
+POST {{SmartX.Api_HostAddress}}/api/deployment/validate
+Content-Type: application/json
+
+{ this is not valid json

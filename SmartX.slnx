@@ -4,5 +4,6 @@
   </Folder>
   <Project Path="SmartX.Api/SmartX.Api.csproj" />
   <Project Path="SmartX.Shared/SmartX.Shared.csproj" />
+  <Project Path="SmartX.Tests/SmartX.Tests.csproj" />
   <Project Path="SmartX.Web/SmartX.Web.csproj" />
 </Solution>

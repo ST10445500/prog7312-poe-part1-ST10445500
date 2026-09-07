@@ -93,3 +93,90 @@ POST {{SmartX.Api_HostAddress}}/api/deployment/validate
 Content-Type: application/json
 
 { this is not valid json
+
+### register an actuator sensor, needed for the telemetry requests below
+POST {{SmartX.Api_HostAddress}}/api/sensors
+Content-Type: application/json
+
+{
+  "macAddress": "AA:BB:CC:DD:EE:03",
+  "location": { "zone": "Zone 1", "room": "Sub-Zone B", "nodeId": "N03" },
+  "category": "Actuator"
+}
+
+### usage on a sensor that has not reported yet, should be 200 with zeroed counters
+GET {{SmartX.Api_HostAddress}}/api/telemetry/AA:BB:CC:DD:EE:01/usage
+
+### post a valid moisture reading
+POST {{SmartX.Api_HostAddress}}/api/telemetry
+Content-Type: application/json
+
+{
+  "macAddress": "AA:BB:CC:DD:EE:01",
+  "value": 42.5
+}
+
+### post a valid power reading
+POST {{SmartX.Api_HostAddress}}/api/telemetry
+Content-Type: application/json
+
+{
+  "macAddress": "AA:BB:CC:DD:EE:02",
+  "value": 400
+}
+
+### post a valid valve state
+POST {{SmartX.Api_HostAddress}}/api/telemetry
+Content-Type: application/json
+
+{
+  "macAddress": "AA:BB:CC:DD:EE:03",
+  "state": true
+}
+
+### posting to an unregistered mac should 400
+POST {{SmartX.Api_HostAddress}}/api/telemetry
+Content-Type: application/json
+
+{
+  "macAddress": "00:00:00:00:00:00",
+  "value": 50
+}
+
+### a moisture reading out of range should 400
+POST {{SmartX.Api_HostAddress}}/api/telemetry
+Content-Type: application/json
+
+{
+  "macAddress": "AA:BB:CC:DD:EE:01",
+  "value": 150
+}
+
+### a negative wattage should 400
+POST {{SmartX.Api_HostAddress}}/api/telemetry
+Content-Type: application/json
+
+{
+  "macAddress": "AA:BB:CC:DD:EE:02",
+  "value": -10
+}
+
+### a mixed batch, 2 valid and 2 rejected, should 200 with accepted 2 and rejected 2
+POST {{SmartX.Api_HostAddress}}/api/telemetry/batch
+Content-Type: application/json
+
+[
+  { "macAddress": "AA:BB:CC:DD:EE:01", "value": 41.0 },
+  { "macAddress": "AA:BB:CC:DD:EE:02", "value": 420 },
+  { "macAddress": "00:00:00:00:00:00", "value": 50 },
+  { "macAddress": "AA:BB:CC:DD:EE:01", "value": 999 }
+]
+
+### the moisture sensor's recent readings, in the flat dashboard shape
+GET {{SmartX.Api_HostAddress}}/api/telemetry/AA:BB:CC:DD:EE:01
+
+### the moisture sensor's usage, should now show one live reading
+GET {{SmartX.Api_HostAddress}}/api/telemetry/AA:BB:CC:DD:EE:01/usage
+
+### recent readings for an unregistered mac should 404
+GET {{SmartX.Api_HostAddress}}/api/telemetry/00:00:00:00:00:00

@@ -30,11 +30,13 @@ namespace SmartX.Api.Controllers
 
         private readonly SensorStore _sensors;
         private readonly TelemetryStore _telemetry;
+        private readonly TelemetryHealth _health;
 
-        public TelemetryController(SensorStore sensors, TelemetryStore telemetry)
+        public TelemetryController(SensorStore sensors, TelemetryStore telemetry, TelemetryHealth health)
         {
             _sensors = sensors;
             _telemetry = telemetry;
+            _health = health;
         }
 
         //..............................................................................//
@@ -138,6 +140,25 @@ namespace SmartX.Api.Controllers
             {
                 LiveCapacity = SensorTelemetry<bool>.LiveWindowSize
             };
+        }
+
+        //..............................................................................//
+
+        //retrieves how a sensor has been behaving, split into equal windows of time
+        [HttpGet("{macAddress}/health")]
+        public ActionResult<SensorHealth> GetHealth(string macAddress, int windows = TelemetryHealth.DefaultWindowCount, int windowSeconds = TelemetryHealth.DefaultWindowSeconds)
+        {
+            var sensor = _sensors.Find(macAddress);
+
+            if (sensor == null)
+            {
+                return NotFound($"No sensor registered with MAC address {macAddress}.");
+            }
+
+            // A sensor that is registered but has never reported still gets a full run
+            // of windows back, all of them silent, so the dashboard draws the gap
+            // rather than leaving an empty row where a sensor should be.
+            return _health.Build(sensor, windows, windowSeconds, DateTime.UtcNow);
         }
 
         //..............................................................................//

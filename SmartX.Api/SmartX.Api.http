@@ -183,3 +183,43 @@ GET {{SmartX.Api_HostAddress}}/api/telemetry/00:00:00:00:00:00
 
 ### every sensor with its latest reading in one call, confirms overview isnt swallowed by the {macAddress} route
 GET {{SmartX.Api_HostAddress}}/api/telemetry/overview
+
+### health for the moisture sensor after a couple of ordinary readings, should be normal
+GET {{SmartX.Api_HostAddress}}/api/telemetry/AA:BB:CC:DD:EE:01/health
+
+### health for a sensor that has never reported, every window should be silent
+POST {{SmartX.Api_HostAddress}}/api/sensors
+Content-Type: application/json
+
+{
+  "macAddress": "AA:BB:CC:DD:EE:04",
+  "location": { "zone": "Zone 1", "room": "Sub-Zone B", "nodeId": "N04" },
+  "category": "PowerConsumption"
+}
+
+### the never-reported sensor's health, should show status silent and no seconds since last reading
+GET {{SmartX.Api_HostAddress}}/api/telemetry/AA:BB:CC:DD:EE:04/health
+
+### post a small reading, then a jump past the 50w threshold, to script a spike
+POST {{SmartX.Api_HostAddress}}/api/telemetry
+Content-Type: application/json
+
+{
+  "macAddress": "AA:BB:CC:DD:EE:04",
+  "value": 100
+}
+
+###
+POST {{SmartX.Api_HostAddress}}/api/telemetry
+Content-Type: application/json
+
+{
+  "macAddress": "AA:BB:CC:DD:EE:04",
+  "value": 200
+}
+
+### that sensor's health should now show a spike window and overall status spike
+GET {{SmartX.Api_HostAddress}}/api/telemetry/AA:BB:CC:DD:EE:04/health
+
+### health for an unregistered mac should 404
+GET {{SmartX.Api_HostAddress}}/api/telemetry/00:00:00:00:00:00/health

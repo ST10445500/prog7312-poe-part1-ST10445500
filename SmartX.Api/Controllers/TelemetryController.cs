@@ -142,6 +142,34 @@ namespace SmartX.Api.Controllers
 
         //..............................................................................//
 
+        //retrieves every registered sensor with its latest reading, for the live overview table
+        [HttpGet("overview")]
+        public ActionResult<List<SensorOverview>> GetOverview()
+        {
+            return _sensors.GetAll()
+                .Select(BuildOverview)
+                .ToList();
+        }
+
+        //..............................................................................//
+
+        //builds one sensor's overview row from its latest usage snapshot
+        private SensorOverview BuildOverview(SensorRegistration sensor)
+        {
+            var usage = _telemetry.GetUsage(sensor.MacAddress, sensor.Category);
+
+            return new SensorOverview
+            {
+                MacAddress = sensor.MacAddress,
+                Category = sensor.Category,
+                Location = sensor.Location,
+                LatestReading = usage?.LatestReading,
+                LatestRecordedAt = usage?.LatestRecordedAt
+            };
+        }
+
+        //..............................................................................//
+
         //checks one reading and stores it, returning why it was turned away or null if it was kept
         private string? TryRecord(IncomingReading reading)
         {

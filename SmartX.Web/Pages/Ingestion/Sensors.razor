@@ -174,6 +174,90 @@ else
     </div>
 </div>
 
+<div class="card mt-4">
+    <div class="card-body">
+        <h5 class="card-title">Attachments</h5>
+        <p class="text-muted small">
+            Config files, deployment photos or hardware logs attached to a sensor.
+            Stored encrypted on the gateway.
+        </p>
+
+        <div class="mb-3">
+            <label class="form-label">Sensor</label>
+            <select class="form-select" style="max-width: 400px;" value="@_attachmentsMac" @onchange="OnAttachmentsSensorChangedAsync">
+                @if (_sensors != null)
+                {
+                    @foreach (var sensor in _sensors)
+                    {
+                        <option value="@sensor.MacAddress">@sensor.MacAddress (@sensor.Category)</option>
+                    }
+                }
+            </select>
+        </div>
+
+        @if (_attachments == null)
+        {
+            <p class="text-muted">Loading...</p>
+        }
+        else if (_attachments.Count == 0)
+        {
+            <p class="text-muted">No files attached to this sensor yet.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Size</th>
+                            <th>Uploaded</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var attachment in _attachments)
+                        {
+                            <tr>
+                                <td>@attachment.FileName</td>
+                                <td>@FormatFileSize(attachment.SizeInBytes)</td>
+                                <td>@attachment.UploadedAt.ToLocalTime().ToString("g")</td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-secondary" href="@DownloadUrl(attachment.Id)">Download</a>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAttachmentAsync(attachment.Id)">Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <hr />
+
+        @if (_uploadSucceeded)
+        {
+            <div class="alert alert-success">File uploaded.</div>
+        }
+        @if (_uploadError != null)
+        {
+            <div class="alert alert-danger">@_uploadError</div>
+        }
+
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-8">
+                <label class="form-label">Attach a file</label>
+                <InputFile class="form-control" OnChange="OnFileSelected" />
+            </div>
+            <div class="col-12 col-md-4">
+                <button class="btn btn-primary" @onclick="UploadAsync" disabled="@(_isUploading || _selectedFile == null)">
+                    @(_isUploading ? "Uploading..." : "Upload")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @code {
     private List<SensorRegistration>? _sensors;
     private bool _loadFailed;
@@ -190,9 +274,25 @@ else
     private string? _customTreeParseError;
     private bool _isValidating;
 
+    private const long MaxUploadBytes = 25 * 1024 * 1024;
+
+    private string _attachmentsMac = string.Empty;
+    private List<AttachmentSummary>? _attachments;
+    private IBrowserFile? _selectedFile;
+    private bool _isUploading;
+    private bool _uploadSucceeded;
+    private string? _uploadError;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadSensorsAsync();
+
+        if (_sensors is { Count: > 0 })
+        {
+            _attachmentsMac = _sensors[0].MacAddress;
+        }
+
+        await LoadAttachmentsAsync();
     }
 
     private async Task LoadSensorsAsync()
@@ -310,6 +410,104 @@ else
         finally
         {
             _isValidating = false;
+        }
+    }
+
+    private async Task OnAttachmentsSensorChangedAsync(ChangeEventArgs e)
+    {
+        _attachmentsMac = e.Value?.ToString() ?? string.Empty;
+        await LoadAttachmentsAsync();
+    }
+
+    private async Task LoadAttachmentsAsync()
+    {
+        if (string.IsNullOrEmpty(_attachmentsMac))
+        {
+            _attachments = new List<AttachmentSummary>();
+            return;
+        }
+
+        try
+        {
+            _attachments = await Http.GetFromJsonAsync<List<AttachmentSummary>>($"api/sensors/{_attachmentsMac}/attachments", ApiJsonOptions.Default);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException)
+        {
+            _attachments = new List<AttachmentSummary>();
+        }
+    }
+
+    private string DownloadUrl(string attachmentId)
+    {
+        return $"{Http.BaseAddress}api/sensors/{_attachmentsMac}/attachments/{attachmentId}";
+    }
+
+    private async Task DeleteAttachmentAsync(string attachmentId)
+    {
+        await Http.DeleteAsync($"api/sensors/{_attachmentsMac}/attachments/{attachmentId}");
+        await LoadAttachmentsAsync();
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return $"{bytes / 1024.0:0.#} KB";
+        }
+
+        return $"{bytes / (1024.0 * 1024.0):0.#} MB";
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+        _uploadSucceeded = false;
+        _uploadError = null;
+    }
+
+    private async Task UploadAsync()
+    {
+        if (_selectedFile == null)
+        {
+            return;
+        }
+
+        _isUploading = true;
+        _uploadSucceeded = false;
+        _uploadError = null;
+
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var fileStream = _selectedFile.OpenReadStream(MaxUploadBytes);
+            using var streamContent = new StreamContent(fileStream);
+            content.Add(streamContent, "file", _selectedFile.Name);
+
+            var response = await Http.PostAsync($"api/sensors/{_attachmentsMac}/attachments", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _uploadSucceeded = true;
+                _selectedFile = null;
+                await LoadAttachmentsAsync();
+            }
+            else
+            {
+                _uploadError = await response.Content.ReadAsStringAsync();
+            }
+        }
+        catch (HttpRequestException)
+        {
+            _uploadError = "Could not reach the gateway API.";
+        }
+        finally
+        {
+            _isUploading = false;
         }
     }
 }

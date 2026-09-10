@@ -15,6 +15,8 @@ builder.Services.AddSingleton<SensorStore>();
 builder.Services.AddSingleton<DeploymentTreeValidator>();
 builder.Services.AddSingleton<TelemetryStore>();
 builder.Services.AddSingleton<TelemetryHealth>();
+builder.Services.AddSingleton<AttachmentStore>();
+builder.Services.AddSingleton<AttachmentEncryption>();
 
 // Controllers and JSON
 // The client sends category names, not numbers, so enums need to bind from strings.

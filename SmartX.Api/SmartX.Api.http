@@ -226,3 +226,15 @@ GET {{SmartX.Api_HostAddress}}/api/telemetry/00:00:00:00:00:00/health
 
 ### the overview now embeds each sensor's whole health, including the scripted spike above
 GET {{SmartX.Api_HostAddress}}/api/telemetry/overview
+
+### list attachments for a sensor, empty until something is uploaded (curl -F is used for the actual upload)
+GET {{SmartX.Api_HostAddress}}/api/sensors/AA:BB:CC:DD:EE:01/attachments
+
+### listing attachments for an unregistered mac should 404
+GET {{SmartX.Api_HostAddress}}/api/sensors/00:00:00:00:00:00/attachments
+
+### downloading an attachment that does not exist should 404
+GET {{SmartX.Api_HostAddress}}/api/sensors/AA:BB:CC:DD:EE:01/attachments/00000000000000000000000000000000
+
+### deleting an attachment that does not exist should 404
+DELETE {{SmartX.Api_HostAddress}}/api/sensors/AA:BB:CC:DD:EE:01/attachments/00000000000000000000000000000000

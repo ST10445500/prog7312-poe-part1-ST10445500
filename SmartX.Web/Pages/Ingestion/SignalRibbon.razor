@@ -1,0 +1,40 @@
+<div class="d-flex align-items-center gap-2">
+    <div class="ribbon-track flex-grow-1">
+        @foreach (var window in Health.Windows)
+        {
+            <div class="ribbon-block @StatusClass(window.Status)" title="@WindowLabel(window)"></div>
+        }
+    </div>
+
+    <Sparkline Values="SparklineValues" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public SensorHealth Health { get; set; } = null!;
+
+    private List<double> SparklineValues =>
+        Health.Windows
+            .Where(window => window.LatestValue != null)
+            .Select(window => window.LatestValue!.Value)
+            .ToList();
+
+    private static string StatusClass(TelemetryStatus status) => status switch
+    {
+        TelemetryStatus.Spike => "ribbon-spike",
+        TelemetryStatus.Silent => "ribbon-silent",
+        _ => "ribbon-normal"
+    };
+
+    private static string WindowLabel(HealthWindow window)
+    {
+        var time = window.WindowStart.ToLocalTime().ToString("HH:mm:ss");
+
+        if (window.Count == 0)
+        {
+            return $"{time} - nothing received";
+        }
+
+        return $"{time} - {window.Count} readings, largest change {window.LargestChange}, latest {window.Latest}";
+    }
+}

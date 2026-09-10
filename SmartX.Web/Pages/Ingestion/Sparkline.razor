@@ -1,0 +1,38 @@
+@if (Values.Count >= 2)
+{
+    <svg width="@Width" height="@Height" viewBox="0 0 @Width @Height" role="img" aria-label="Recent readings">
+        <polyline points="@Points" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" />
+    </svg>
+}
+
+@code {
+    private const int Width = 132;
+    private const int Height = 30;
+    private const int Padding = 3;
+
+    [Parameter, EditorRequired]
+    public List<double> Values { get; set; } = new();
+
+    private string Points
+    {
+        get
+        {
+            var lowest = Values.Min();
+            var highest = Values.Max();
+            var span = highest - lowest == 0 ? 1 : highest - lowest;
+            var step = (double)Width / (Values.Count - 1);
+            var usable = Height - Padding * 2;
+
+            var points = new List<string>();
+
+            for (var index = 0; index < Values.Count; index++)
+            {
+                var x = index * step;
+                var y = Height - Padding - ((Values[index] - lowest) / span) * usable;
+                points.Add($"{x.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}");
+            }
+
+            return string.Join(" ", points);
+        }
+    }
+}

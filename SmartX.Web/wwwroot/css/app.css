@@ -87,3 +87,36 @@ code {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.ribbon-track {
+    display: flex;
+    gap: 2px;
+}
+
+.ribbon-block {
+    flex-grow: 1;
+    height: 28px;
+    border-radius: 2px;
+}
+
+.ribbon-normal {
+    background-color: var(--bs-secondary-bg);
+    border: 1px solid var(--bs-secondary-border-subtle);
+}
+
+.ribbon-spike {
+    background-color: var(--bs-warning);
+    background-image: repeating-linear-gradient(
+        45deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 4px,
+        transparent 4px,
+        transparent 8px
+    );
+    border: 1px solid var(--bs-warning-border-subtle);
+}
+
+.ribbon-silent {
+    background-color: transparent;
+    border: 1px dashed var(--bs-danger-border-subtle);
+}

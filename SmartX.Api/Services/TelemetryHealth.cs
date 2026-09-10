@@ -165,6 +165,7 @@ namespace SmartX.Api.Services
             }
 
             window.Latest = readings[readings.Count - 1].Value.ToString();
+            window.LatestValue = readings[readings.Count - 1].Value.Percent;
 
             if (largest > new MoistureReading(MoistureSpikePercent))
             {
@@ -210,6 +211,7 @@ namespace SmartX.Api.Services
             }
 
             window.Latest = readings[readings.Count - 1].Value.ToString();
+            window.LatestValue = readings[readings.Count - 1].Value.Watts;
 
             if (largest > new PowerReading(PowerSpikeWatts))
             {
@@ -245,6 +247,7 @@ namespace SmartX.Api.Services
             }
 
             window.Latest = readings[readings.Count - 1].Value ? "Open" : "Closed";
+            window.LatestValue = readings[readings.Count - 1].Value ? 1 : 0;
 
             // A valve cannot spike the way a meter can, because it is only ever open
             // or closed. The fault worth catching is one that keeps flipping between

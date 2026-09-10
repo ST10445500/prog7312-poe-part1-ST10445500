@@ -24,6 +24,9 @@ namespace SmartX.Shared.Models
 
         //when that reading was recorded
         public DateTime? LatestRecordedAt { get; set; }
+
+        //how the sensor has been behaving, for drawing its signal trace ribbon
+        public SensorHealth Health { get; set; } = new SensorHealth();
     }
 }
 

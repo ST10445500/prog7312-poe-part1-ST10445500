@@ -223,3 +223,6 @@ GET {{SmartX.Api_HostAddress}}/api/telemetry/AA:BB:CC:DD:EE:04/health
 
 ### health for an unregistered mac should 404
 GET {{SmartX.Api_HostAddress}}/api/telemetry/00:00:00:00:00:00/health
+
+### the overview now embeds each sensor's whole health, including the scripted spike above
+GET {{SmartX.Api_HostAddress}}/api/telemetry/overview

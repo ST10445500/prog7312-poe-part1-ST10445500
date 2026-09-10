@@ -51,6 +51,9 @@ namespace SmartX.Shared.Models
 
         //the newest reading in the window, or null if none arrived
         public string? Latest { get; set; }
+
+        //the newest reading in the window as a plain number, for drawing a sparkline
+        public double? LatestValue { get; set; }
     }
 }
 

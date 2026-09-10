@@ -185,7 +185,11 @@ namespace SmartX.Api.Controllers
                 Category = sensor.Category,
                 Location = sensor.Location,
                 LatestReading = usage?.LatestReading,
-                LatestRecordedAt = usage?.LatestRecordedAt
+                LatestRecordedAt = usage?.LatestRecordedAt,
+                // Building this here, rather than a second call to GetHealth, is what
+                // keeps the overview a single round trip no matter how many sensors
+                // the ribbon has to draw.
+                Health = _health.Build(sensor, TelemetryHealth.DefaultWindowCount, TelemetryHealth.DefaultWindowSeconds, DateTime.UtcNow)
             };
         }
 

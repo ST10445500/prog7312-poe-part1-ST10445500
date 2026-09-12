@@ -21,7 +21,7 @@
 }
 else if (_sensors == null)
 {
-    <div class="text-center text-muted py-4">Loading...</div>
+    <LoadingBlock />
 }
 else if (_sensors.Count == 0)
 {
@@ -33,8 +33,15 @@ else if (_sensors.Count == 0)
 }
 else
 {
-    <div class="mb-3">
-        <RibbonLegend />
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <FleetSummary Sensors="_sensors" />
+
+        @if (_lastUpdated != null)
+        {
+            <span class="text-muted small">
+                <span class="live-dot me-1"></span>Updated @_lastUpdated.Value.ToLocalTime().ToString("HH:mm:ss")
+            </span>
+        }
     </div>
 
     <div class="row g-3 mb-4">
@@ -121,6 +128,10 @@ else
 
                 <div class="col-12 col-md-4">
                     <button class="btn btn-primary" @onclick="RecordTestReadingAsync" disabled="@_isSubmittingReading">
+                        @if (_isSubmittingReading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
                         @(_isSubmittingReading ? "Recording..." : "Record Reading")
                     </button>
                 </div>
@@ -131,9 +142,11 @@ else
 
 @code {
     private const int PollIntervalMilliseconds = 4000;
+    private const int AlertTimeoutMilliseconds = 3000;
 
     private List<SensorOverview>? _sensors;
     private bool _loadFailed;
+    private DateTime? _lastUpdated;
     private System.Timers.Timer? _pollTimer;
 
     private string _selectedMac = string.Empty;
@@ -179,6 +192,7 @@ else
         {
             _sensors = await Http.GetFromJsonAsync<List<SensorOverview>>("api/telemetry/overview", ApiJsonOptions.Default);
             _loadFailed = false;
+            _lastUpdated = DateTime.UtcNow;
 
             // Keeps a sensor selected in the test-reading form once the fleet has
             // loaded, rather than leaving the dropdown on a blank first option.
@@ -225,6 +239,22 @@ else
         {
             _isSubmittingReading = false;
         }
+
+        await ClearReadingSuccessAsync();
+    }
+
+    private async Task ClearReadingSuccessAsync()
+    {
+        if (!_readingSucceeded)
+        {
+            return;
+        }
+
+        // Without this render the flag would be set and cleared inside one pass,
+        // so the alert would never actually appear.
+        StateHasChanged();
+        await Task.Delay(AlertTimeoutMilliseconds);
+        _readingSucceeded = false;
     }
 
     public void Dispose()

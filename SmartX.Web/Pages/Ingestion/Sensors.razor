@@ -39,7 +39,7 @@
 {
     @if (_sensors == null && !_loadFailed)
     {
-        <div class="text-center text-muted py-4">Loading...</div>
+        <LoadingBlock />
     }
     else if (_sensors is { Count: 0 })
     {
@@ -124,6 +124,10 @@ else if (_activeTab == "register")
                 </div>
 
                 <button type="submit" class="btn btn-primary mt-3" disabled="@_isSubmitting">
+                    @if (_isSubmitting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
                     @(_isSubmitting ? "Registering..." : "Register")
                 </button>
             </EditForm>
@@ -145,7 +149,7 @@ else if (_activeTab == "hierarchy")
             }
             else if (!_loadFailed)
             {
-                <div class="text-center text-muted py-4">Loading...</div>
+                <LoadingBlock />
             }
         </div>
     </div>
@@ -174,6 +178,10 @@ else if (_activeTab == "hierarchy")
             <textarea class="form-control font-monospace" rows="12" @bind="_customTreeJson"></textarea>
 
             <button class="btn btn-primary mt-3" @onclick="ValidateCustomTreeAsync" disabled="@_isValidating">
+                @if (_isValidating)
+                {
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                }
                 @(_isValidating ? "Validating..." : "Validate hierarchy")
             </button>
 
@@ -231,7 +239,7 @@ else if (_activeTab == "files")
 
             @if (_attachments == null)
             {
-                <div class="text-center text-muted py-4">Loading...</div>
+                <LoadingBlock />
             }
             else if (_attachments.Count == 0)
             {
@@ -285,6 +293,10 @@ else if (_activeTab == "files")
                 </div>
                 <div class="col-12 col-md-4">
                     <button class="btn btn-primary" @onclick="UploadAsync" disabled="@(_isUploading || _selectedFile == null)">
+                        @if (_isUploading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
                         @(_isUploading ? "Uploading..." : "Upload")
                     </button>
                 </div>
@@ -312,6 +324,7 @@ else if (_activeTab == "files")
     private bool _isValidating;
 
     private const long MaxUploadBytes = 25 * 1024 * 1024;
+    private const int AlertTimeoutMilliseconds = 3000;
 
     private string _attachmentsMac = string.Empty;
     private List<AttachmentSummary>? _attachments;
@@ -387,6 +400,22 @@ else if (_activeTab == "files")
         {
             _isSubmitting = false;
         }
+
+        await ClearRegisterSuccessAsync();
+    }
+
+    private async Task ClearRegisterSuccessAsync()
+    {
+        if (!_registerSucceeded)
+        {
+            return;
+        }
+
+        // Without this render the flag would be set and cleared inside one pass,
+        // so the alert would never actually appear.
+        StateHasChanged();
+        await Task.Delay(AlertTimeoutMilliseconds);
+        _registerSucceeded = false;
     }
 
     private void LoadActiveHierarchy()
@@ -556,5 +585,19 @@ else if (_activeTab == "files")
         {
             _isUploading = false;
         }
+
+        await ClearUploadSuccessAsync();
+    }
+
+    private async Task ClearUploadSuccessAsync()
+    {
+        if (!_uploadSucceeded)
+        {
+            return;
+        }
+
+        StateHasChanged();
+        await Task.Delay(AlertTimeoutMilliseconds);
+        _uploadSucceeded = false;
     }
 }

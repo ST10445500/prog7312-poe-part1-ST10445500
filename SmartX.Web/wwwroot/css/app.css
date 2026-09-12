@@ -153,6 +153,14 @@ code {
     text-align: start;
 }
 
+.live-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--sx-accent);
+}
+
 .ribbon-track {
     display: flex;
     gap: 2px;

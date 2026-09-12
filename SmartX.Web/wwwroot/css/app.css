@@ -1,20 +1,20 @@
 :root {
-    --sx-bg: #0e1319;
-    --sx-surface: #161d26;
-    --sx-border: #263140;
-    --sx-highlight: rgba(255, 255, 255, 0.06);
-    --sx-text: #dce3ec;
-    --sx-text-muted: #8a97a8;
-    --sx-accent: #4c8dff;
-    --sx-accent-rgb: 76, 141, 255;
-    --sx-warn: #c8842a;
-    --sx-fault: #a4535f;
+    --sx-bg: #f4f6f9;
+    --sx-surface: #ffffff;
+    --sx-border: #dde3ea;
+    --sx-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    --sx-text: #1b2430;
+    --sx-text-muted: #64748b;
+    --sx-accent: #2563eb;
+    --sx-accent-rgb: 37, 99, 235;
+    --sx-warn: #d97706;
+    --sx-fault: #b91c1c;
 }
 
-[data-bs-theme=dark] {
+[data-bs-theme=light] {
     --bs-body-bg: var(--sx-bg);
     --bs-body-color: var(--sx-text);
-    --bs-emphasis-color: #fff;
+    --bs-emphasis-color: #0f172a;
     --bs-border-color: var(--sx-border);
     --bs-secondary-color: var(--sx-text-muted);
     --bs-secondary-bg: var(--sx-surface);
@@ -31,28 +31,28 @@
     --bs-table-color: var(--sx-text);
     --bs-table-bg: transparent;
     --bs-table-border-color: var(--sx-border);
-    --bs-table-striped-bg: rgba(255, 255, 255, 0.03);
+    --bs-table-striped-bg: rgba(16, 24, 40, 0.03);
 }
 
-    [data-bs-theme=dark] .btn-primary {
+    [data-bs-theme=light] .btn-primary {
         --bs-btn-bg: var(--sx-accent);
         --bs-btn-border-color: var(--sx-accent);
-        --bs-btn-hover-bg: #3d7ae6;
-        --bs-btn-hover-border-color: #3d7ae6;
-        --bs-btn-active-bg: #3369cc;
-        --bs-btn-active-border-color: #3369cc;
+        --bs-btn-hover-bg: #1d4ed8;
+        --bs-btn-hover-border-color: #1d4ed8;
+        --bs-btn-active-bg: #1e40af;
+        --bs-btn-active-border-color: #1e40af;
         --bs-btn-focus-shadow-rgb: var(--sx-accent-rgb);
         --bs-btn-disabled-bg: var(--sx-accent);
         --bs-btn-disabled-border-color: var(--sx-accent);
     }
 
-    [data-bs-theme=dark] .form-control:focus,
-    [data-bs-theme=dark] .form-select:focus {
+    [data-bs-theme=light] .form-control:focus,
+    [data-bs-theme=light] .form-select:focus {
         border-color: var(--sx-accent);
         box-shadow: 0 0 0 0.25rem rgba(var(--sx-accent-rgb), 0.25);
     }
 
-    [data-bs-theme=dark] .btn-outline-danger {
+    [data-bs-theme=light] .btn-outline-danger {
         --bs-btn-color: var(--sx-fault);
         --bs-btn-border-color: var(--sx-fault);
         --bs-btn-hover-bg: var(--sx-fault);
@@ -124,7 +124,7 @@
     }
 
         .loading-progress circle:last-child {
-            stroke: #1b6ec2;
+            stroke: var(--sx-accent);
             stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
             transition: stroke-dasharray 0.05s ease-in-out;
         }
@@ -165,7 +165,7 @@ code {
 }
 
 .ribbon-normal {
-    background-color: var(--sx-surface);
+    background-color: #eef2f6;
     border: 1px solid var(--sx-border);
 }
 
@@ -186,26 +186,54 @@ code {
     border: 1px dashed var(--sx-fault);
 }
 
-[data-bs-theme=dark] .card {
-    box-shadow: inset 0 1px 0 var(--sx-highlight);
+[data-bs-theme=light] .card {
+    box-shadow: var(--sx-shadow);
 }
 
-[data-bs-theme=dark] h1,
-[data-bs-theme=dark] h2 {
+[data-bs-theme=light] .card-title {
     font-weight: 600;
     letter-spacing: -0.01em;
 }
 
-[data-bs-theme=dark] .font-monospace {
+[data-bs-theme=light] .card-body p.text-muted.small {
+    margin-top: -0.25rem;
+}
+
+[data-bs-theme=light] h1,
+[data-bs-theme=light] h2 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+[data-bs-theme=light] .font-monospace {
     color: var(--sx-text);
     letter-spacing: -0.01em;
 }
 
-[data-bs-theme=dark] .navbar {
+[data-bs-theme=light] .navbar {
     background-color: var(--sx-surface);
     border-bottom: 1px solid var(--sx-border);
 }
 
-    [data-bs-theme=dark] .navbar .nav-link.active {
+    [data-bs-theme=light] .navbar .nav-link.active {
         color: var(--sx-accent);
     }
+
+[data-bs-theme=light] .table thead th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--sx-text-muted);
+}
+
+[data-bs-theme=light] .table-hover > tbody > tr:hover > * {
+    background-color: rgba(var(--sx-accent-rgb), 0.04);
+}
+
+[data-bs-theme=light] a:focus-visible,
+[data-bs-theme=light] button:focus-visible,
+[data-bs-theme=light] .btn:focus-visible {
+    outline: 2px solid var(--sx-accent);
+    outline-offset: 2px;
+}

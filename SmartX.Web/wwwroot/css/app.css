@@ -1,20 +1,85 @@
+:root {
+    --sx-bg: #0e1319;
+    --sx-surface: #161d26;
+    --sx-border: #263140;
+    --sx-highlight: rgba(255, 255, 255, 0.06);
+    --sx-text: #dce3ec;
+    --sx-text-muted: #8a97a8;
+    --sx-accent: #4c8dff;
+    --sx-accent-rgb: 76, 141, 255;
+    --sx-warn: #c8842a;
+    --sx-fault: #a4535f;
+}
+
+[data-bs-theme=dark] {
+    --bs-body-bg: var(--sx-bg);
+    --bs-body-color: var(--sx-text);
+    --bs-emphasis-color: #fff;
+    --bs-border-color: var(--sx-border);
+    --bs-secondary-color: var(--sx-text-muted);
+    --bs-secondary-bg: var(--sx-surface);
+    --bs-tertiary-bg: var(--sx-surface);
+    --bs-primary: var(--sx-accent);
+    --bs-primary-rgb: var(--sx-accent-rgb);
+    --bs-link-color: var(--sx-accent);
+    --bs-link-color-rgb: var(--sx-accent-rgb);
+    --bs-link-hover-color: var(--sx-accent);
+    --bs-link-hover-color-rgb: var(--sx-accent-rgb);
+    --bs-focus-ring-color: rgba(var(--sx-accent-rgb), 0.25);
+    --bs-card-bg: var(--sx-surface);
+    --bs-card-border-color: var(--sx-border);
+    --bs-table-color: var(--sx-text);
+    --bs-table-bg: transparent;
+    --bs-table-border-color: var(--sx-border);
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.03);
+}
+
+    [data-bs-theme=dark] .btn-primary {
+        --bs-btn-bg: var(--sx-accent);
+        --bs-btn-border-color: var(--sx-accent);
+        --bs-btn-hover-bg: #3d7ae6;
+        --bs-btn-hover-border-color: #3d7ae6;
+        --bs-btn-active-bg: #3369cc;
+        --bs-btn-active-border-color: #3369cc;
+        --bs-btn-focus-shadow-rgb: var(--sx-accent-rgb);
+        --bs-btn-disabled-bg: var(--sx-accent);
+        --bs-btn-disabled-border-color: var(--sx-accent);
+    }
+
+    [data-bs-theme=dark] .form-control:focus,
+    [data-bs-theme=dark] .form-select:focus {
+        border-color: var(--sx-accent);
+        box-shadow: 0 0 0 0.25rem rgba(var(--sx-accent-rgb), 0.25);
+    }
+
+    [data-bs-theme=dark] .btn-outline-danger {
+        --bs-btn-color: var(--sx-fault);
+        --bs-btn-border-color: var(--sx-fault);
+        --bs-btn-hover-bg: var(--sx-fault);
+        --bs-btn-hover-border-color: var(--sx-fault);
+        --bs-btn-active-bg: var(--sx-fault);
+        --bs-btn-active-border-color: var(--sx-fault);
+        --bs-btn-disabled-color: var(--sx-fault);
+        --bs-btn-disabled-border-color: var(--sx-fault);
+    }
+
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
 }
 
 .invalid {
-    outline: 1px solid red;
+    outline: 1px solid var(--sx-fault);
 }
 
 .validation-message {
-    color: red;
+    color: var(--sx-fault);
 }
 
 #blazor-error-ui {
-    color-scheme: light only;
-    background: lightyellow;
+    background: var(--sx-fault);
+    color: #fff;
     bottom: 0;
-    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.4);
     box-sizing: border-box;
     display: none;
     left: 0;
@@ -76,7 +141,7 @@
     }
 
 code {
-    color: #c02d76;
+    color: var(--sx-accent);
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
@@ -100,12 +165,12 @@ code {
 }
 
 .ribbon-normal {
-    background-color: var(--bs-secondary-bg);
-    border: 1px solid var(--bs-secondary-border-subtle);
+    background-color: var(--sx-surface);
+    border: 1px solid var(--sx-border);
 }
 
 .ribbon-spike {
-    background-color: var(--bs-warning);
+    background-color: var(--sx-warn);
     background-image: repeating-linear-gradient(
         45deg,
         rgba(0, 0, 0, 0.15),
@@ -113,10 +178,34 @@ code {
         transparent 4px,
         transparent 8px
     );
-    border: 1px solid var(--bs-warning-border-subtle);
+    border: 1px solid var(--sx-warn);
 }
 
 .ribbon-silent {
     background-color: transparent;
-    border: 1px dashed var(--bs-danger-border-subtle);
+    border: 1px dashed var(--sx-fault);
 }
+
+[data-bs-theme=dark] .card {
+    box-shadow: inset 0 1px 0 var(--sx-highlight);
+}
+
+[data-bs-theme=dark] h1,
+[data-bs-theme=dark] h2 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+[data-bs-theme=dark] .font-monospace {
+    color: var(--sx-text);
+    letter-spacing: -0.01em;
+}
+
+[data-bs-theme=dark] .navbar {
+    background-color: var(--sx-surface);
+    border-bottom: 1px solid var(--sx-border);
+}
+
+    [data-bs-theme=dark] .navbar .nav-link.active {
+        color: var(--sx-accent);
+    }

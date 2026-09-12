@@ -24,6 +24,13 @@ namespace SmartX.Web.Services
         {
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
             options.Converters.Add(new JsonStringEnumConverter());
+
+            // A deployment tree costs two levels of depth per level of tree, so the
+            // default of 64 runs out around 32 levels deep. The API already reads
+            // trees at 256 and the client has to match it or the same tree cannot
+            // be shown or posted.
+            options.MaxDepth = 256;
+
             return options;
         }
     }

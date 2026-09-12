@@ -265,8 +265,17 @@ else if (_activeTab == "files")
                                     <td>@FormatFileSize(attachment.SizeInBytes)</td>
                                     <td>@attachment.UploadedAt.ToLocalTime().ToString("g")</td>
                                     <td class="text-end">
-                                        <a class="btn btn-sm btn-outline-secondary" href="@DownloadUrl(attachment.Id)">Download</a>
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAttachmentAsync(attachment.Id)">Delete</button>
+                                        @if (_pendingDeleteId == attachment.Id)
+                                        {
+                                            <span class="text-muted small me-2">Delete this file?</span>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDeleteAsync(attachment.Id)">Yes, delete</button>
+                                            <button class="btn btn-sm btn-outline-secondary" @onclick="CancelDelete">Cancel</button>
+                                        }
+                                        else
+                                        {
+                                            <a class="btn btn-sm btn-outline-secondary" href="@DownloadUrl(attachment.Id)">Download</a>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => RequestDelete(attachment.Id)">Delete</button>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -328,6 +337,7 @@ else if (_activeTab == "files")
 
     private string _attachmentsMac = string.Empty;
     private List<AttachmentSummary>? _attachments;
+    private string? _pendingDeleteId;
     private IBrowserFile? _selectedFile;
     private bool _isUploading;
     private bool _uploadSucceeded;
@@ -497,6 +507,10 @@ else if (_activeTab == "files")
 
     private async Task LoadAttachmentsAsync()
     {
+        // A confirm left open against the old list would point at a file that is
+        // no longer on screen.
+        _pendingDeleteId = null;
+
         if (string.IsNullOrEmpty(_attachmentsMac))
         {
             _attachments = new List<AttachmentSummary>();
@@ -518,8 +532,19 @@ else if (_activeTab == "files")
         return $"{Http.BaseAddress}api/sensors/{_attachmentsMac}/attachments/{attachmentId}";
     }
 
-    private async Task DeleteAttachmentAsync(string attachmentId)
+    private void RequestDelete(string attachmentId)
     {
+        _pendingDeleteId = attachmentId;
+    }
+
+    private void CancelDelete()
+    {
+        _pendingDeleteId = null;
+    }
+
+    private async Task ConfirmDeleteAsync(string attachmentId)
+    {
+        _pendingDeleteId = null;
         await Http.DeleteAsync($"api/sensors/{_attachmentsMac}/attachments/{attachmentId}");
         await LoadAttachmentsAsync();
     }

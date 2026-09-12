@@ -1,0 +1,88 @@
+<div class="d-flex flex-wrap align-items-center gap-2 py-1">
+    <input class="form-control form-control-sm" style="max-width: 220px;" value="@Node.Name" @onchange="NameChangedAsync" />
+
+    @if (Node.IsSensor)
+    {
+        <input class="form-control form-control-sm font-monospace" style="max-width: 240px;"
+               list="@MacListId" value="@Node.SensorMacAddress" @onchange="MacChangedAsync" />
+    }
+    else
+    {
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AddZoneAsync">+ Zone</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AddSensorAsync">+ Sensor</button>
+    }
+
+    @if (OnRemove.HasDelegate)
+    {
+        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="OnRemove">Remove</button>
+    }
+</div>
+
+@if (Node.Children.Count > 0)
+{
+    <div class="ms-3 border-start ps-3">
+        @foreach (var child in Node.Children)
+        {
+            <DeploymentTreeEditor @key="child"
+                                  Node="child"
+                                  MacListId="@MacListId"
+                                  DefaultMacAddress="@DefaultMacAddress"
+                                  OnChanged="OnChanged"
+                                  OnRemove="@(() => RemoveChildAsync(child))" />
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public DeploymentNode Node { get; set; } = null!;
+
+    [Parameter]
+    public string MacListId { get; set; } = string.Empty;
+
+    [Parameter]
+    public string DefaultMacAddress { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnRemove { get; set; }
+
+    private async Task NameChangedAsync(ChangeEventArgs e)
+    {
+        Node.Name = e.Value?.ToString() ?? string.Empty;
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task MacChangedAsync(ChangeEventArgs e)
+    {
+        // Clearing the address turns the node back into a zone, because that is
+        // exactly what DeploymentNode.IsSensor keys off.
+        Node.SensorMacAddress = e.Value?.ToString();
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task AddZoneAsync()
+    {
+        Node.Children.Add(new DeploymentNode { Name = "New zone" });
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task AddSensorAsync()
+    {
+        Node.Children.Add(new DeploymentNode
+        {
+            Name = "New sensor",
+            SensorMacAddress = DefaultMacAddress
+        });
+
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task RemoveChildAsync(DeploymentNode child)
+    {
+        Node.Children.Remove(child);
+        await OnChanged.InvokeAsync();
+    }
+}

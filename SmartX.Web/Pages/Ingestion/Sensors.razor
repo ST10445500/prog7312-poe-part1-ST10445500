@@ -158,24 +158,58 @@ else if (_activeTab == "hierarchy")
         <div class="card-body">
             <h5 class="card-title">Custom Deployment Check</h5>
             <p class="text-muted small">
-                The gateway accepts a deployment tree of any depth over the API. Edit the
-                JSON and validate it to see what the recursive walk reports — this is
+                The gateway accepts a deployment tree of any depth over the API. Build a
+                tree here and validate it to see what the recursive walk reports — this is
                 exactly what gets posted to <code>/api/deployment/validate</code>.
             </p>
 
-            <div class="mb-3">
-                <button class="btn btn-sm btn-outline-secondary me-2" @onclick="LoadActiveHierarchy">
-                    Load the active hierarchy
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                <span class="text-muted small">Start from:</span>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadActiveHierarchy">
+                    Active hierarchy
                 </button>
-                <button class="btn btn-sm btn-outline-secondary me-2" @onclick="LoadBrokenExample">
-                    Load a broken example
+
+                <span class="text-muted small ms-3">Demo examples, for trying the validator:</span>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadBrokenExample">
+                    Broken tree
                 </button>
                 <button class="btn btn-sm btn-outline-secondary" @onclick="LoadDeepExample">
-                    Nest 40 levels
+                    40 levels deep
                 </button>
             </div>
 
-            <textarea class="form-control font-monospace" rows="12" @bind="_customTreeJson"></textarea>
+            <datalist id="@MacListId">
+                @if (_sensors != null)
+                {
+                    @foreach (var sensor in _sensors)
+                    {
+                        <option value="@sensor.MacAddress"></option>
+                    }
+                }
+            </datalist>
+
+            @if (_jsonMode)
+            {
+                <textarea class="form-control font-monospace" rows="12" @bind="_customTreeJson"></textarea>
+
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-secondary me-2" @onclick="ApplyJson">Apply JSON</button>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ShowBuilder">Back to builder</button>
+                </div>
+            }
+            else
+            {
+                <div class="border rounded p-3">
+                    <DeploymentTreeEditor Node="_customTree"
+                                          MacListId="@MacListId"
+                                          DefaultMacAddress="@DefaultMacAddress"
+                                          OnChanged="OnCustomTreeChanged" />
+                </div>
+
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ShowJson">Edit as JSON</button>
+                </div>
+            }
 
             <button class="btn btn-primary mt-3" @onclick="ValidateCustomTreeAsync" disabled="@_isValidating">
                 @if (_isValidating)
@@ -325,12 +359,19 @@ else if (_activeTab == "files")
     private bool _registerSucceeded;
     private string? _registerError;
 
+    private const string MacListId = "known-mac-addresses";
+
     private static readonly JsonSerializerOptions TreeDisplayOptions = new(ApiJsonOptions.Default) { WriteIndented = true };
 
-    private string _customTreeJson = JsonSerializer.Serialize(DeploymentTreeBuilder.BuildBrokenExample(), TreeDisplayOptions);
+    private DeploymentNode _customTree = new DeploymentNode { Name = "Facility A" };
     private DeploymentValidationResult? _customTreeResult;
     private string? _customTreeParseError;
     private bool _isValidating;
+    private bool _jsonMode;
+    private string _customTreeJson = string.Empty;
+
+    private string DefaultMacAddress =>
+        _sensors is { Count: > 0 } ? _sensors[0].MacAddress : "AA:BB:CC:DD:EE:FF";
 
     private const long MaxUploadBytes = 25 * 1024 * 1024;
     private const int AlertTimeoutMilliseconds = 3000;
@@ -446,16 +487,36 @@ else if (_activeTab == "files")
 
     private void LoadCustomTree(DeploymentNode tree)
     {
-        _customTreeJson = JsonSerializer.Serialize(tree, TreeDisplayOptions);
+        _customTree = tree;
         _customTreeResult = null;
         _customTreeParseError = null;
     }
 
-    private async Task ValidateCustomTreeAsync()
+    private void OnCustomTreeChanged()
     {
+        // A result describes the tree as it was when it was checked, so it stops
+        // being true the moment the tree is edited.
         _customTreeResult = null;
         _customTreeParseError = null;
+    }
 
+    private void ShowJson()
+    {
+        _customTreeJson = JsonSerializer.Serialize(_customTree, TreeDisplayOptions);
+        _customTreeParseError = null;
+        _jsonMode = true;
+    }
+
+    private void ShowBuilder()
+    {
+        // Anything typed since the last Apply is dropped on purpose, so there is
+        // never a question of which of the two is the real tree.
+        _customTreeParseError = null;
+        _jsonMode = false;
+    }
+
+    private void ApplyJson()
+    {
         DeploymentNode? tree;
 
         try
@@ -474,11 +535,19 @@ else if (_activeTab == "files")
             return;
         }
 
+        LoadCustomTree(tree);
+        _jsonMode = false;
+    }
+
+    private async Task ValidateCustomTreeAsync()
+    {
+        _customTreeResult = null;
+        _customTreeParseError = null;
         _isValidating = true;
 
         try
         {
-            var response = await Http.PostAsJsonAsync("api/deployment/validate", tree, ApiJsonOptions.Default);
+            var response = await Http.PostAsJsonAsync("api/deployment/validate", _customTree, ApiJsonOptions.Default);
 
             if (response.IsSuccessStatusCode)
             {

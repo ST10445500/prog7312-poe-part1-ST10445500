@@ -219,6 +219,15 @@ code {
         color: var(--sx-accent);
     }
 
+[data-bs-theme=light] .nav-tabs .nav-link {
+    color: var(--sx-text-muted);
+}
+
+    [data-bs-theme=light] .nav-tabs .nav-link.active {
+        color: var(--sx-accent);
+        font-weight: 600;
+    }
+
 [data-bs-theme=light] .table thead th {
     font-size: 0.75rem;
     font-weight: 600;

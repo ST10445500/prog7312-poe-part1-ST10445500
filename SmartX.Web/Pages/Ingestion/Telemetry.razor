@@ -5,7 +5,69 @@
 
 <PageTitle>Telemetry - Smart-X</PageTitle>
 
-<h2>Telemetry</h2>
+<div class="mb-4">
+    <h2>Telemetry</h2>
+    <p class="text-muted">
+        Live readings from the fleet, refreshed every few seconds, with a Signal
+        Trace ribbon showing what each sensor has been doing.
+    </p>
+</div>
+
+@if (_loadFailed)
+{
+    <div class="alert alert-danger">
+        Could not reach the gateway API. Make sure SmartX.Api is running.
+    </div>
+}
+else if (_sensors == null)
+{
+    <div class="text-center text-muted py-4">Loading...</div>
+}
+else if (_sensors.Count == 0)
+{
+    <div class="card mb-4">
+        <div class="card-body text-center text-muted py-5">
+            No sensors registered yet. <a href="ingestion/sensors">Register one</a> to get started.
+        </div>
+    </div>
+}
+else
+{
+    <div class="mb-3">
+        <RibbonLegend />
+    </div>
+
+    <div class="row g-3 mb-4">
+        @foreach (var sensor in _sensors)
+        {
+            <div class="col-12 col-lg-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-0 font-monospace">@sensor.MacAddress</h6>
+                                <span class="text-muted small">
+                                    @sensor.Location.Zone / @sensor.Location.Room / @sensor.Location.NodeId
+                                </span>
+                            </div>
+                            <span class="badge text-bg-secondary">@sensor.Category</span>
+                        </div>
+
+                        <div class="mb-3">
+                            <span class="fs-4 font-monospace">@FormatLatestReading(sensor)</span>
+                            @if (sensor.LatestRecordedAt != null)
+                            {
+                                <span class="text-muted small ms-2">@sensor.LatestRecordedAt.Value.ToLocalTime().ToString("g")</span>
+                            }
+                        </div>
+
+                        <SignalRibbon Health="sensor.Health" />
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
 
 @if (_sensors is { Count: > 0 })
 {
@@ -64,62 +126,6 @@
                 </div>
             </div>
         </div>
-    </div>
-}
-
-@if (_loadFailed)
-{
-    <div class="alert alert-danger">
-        Could not reach the gateway API. Make sure SmartX.Api is running.
-    </div>
-}
-else if (_sensors == null)
-{
-    <p class="text-muted">Loading...</p>
-}
-else if (_sensors.Count == 0)
-{
-    <div class="card">
-        <div class="card-body text-center text-muted py-5">
-            No sensors registered yet. <a href="ingestion/sensors">Register one</a> to get started.
-        </div>
-    </div>
-}
-else
-{
-    <div class="mb-3">
-        <RibbonLegend />
-    </div>
-
-    <div class="row g-3">
-        @foreach (var sensor in _sensors)
-        {
-            <div class="col-12 col-lg-6">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <h6 class="mb-0">@sensor.MacAddress</h6>
-                                <span class="text-muted small">
-                                    @sensor.Location.Zone / @sensor.Location.Room / @sensor.Location.NodeId
-                                </span>
-                            </div>
-                            <span class="badge text-bg-secondary">@sensor.Category</span>
-                        </div>
-
-                        <div class="mb-3">
-                            <span class="fs-4 font-monospace">@FormatLatestReading(sensor)</span>
-                            @if (sensor.LatestRecordedAt != null)
-                            {
-                                <span class="text-muted small ms-2">@sensor.LatestRecordedAt.Value.ToLocalTime().ToString("g")</span>
-                            }
-                        </div>
-
-                        <SignalRibbon Health="sensor.Health" />
-                    </div>
-                </div>
-            </div>
-        }
     </div>
 }
 

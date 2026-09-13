@@ -41,6 +41,27 @@ namespace SmartX.Simulator
 
         //..............................................................................//
 
+        //posts a batch of readings and reports what the gateway kept
+        public async Task<BatchResult> PostBatchAsync(List<DeviceReading> readings)
+        {
+            var response = await _http.PostAsJsonAsync("api/telemetry/batch", readings, JsonOptions);
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadFromJsonAsync<BatchResult>(JsonOptions);
+            return result ?? new BatchResult();
+        }
+
+        //..............................................................................//
+
+        //posts a single reading the way a device reports one as it takes it
+        public async Task PostReadingAsync(DeviceReading reading, CancellationToken token)
+        {
+            var response = await _http.PostAsJsonAsync("api/telemetry", reading, JsonOptions, token);
+            response.EnsureSuccessStatusCode();
+        }
+
+        //..............................................................................//
+
         //builds the json settings every call from this client uses
         private static JsonSerializerOptions CreateJsonOptions()
         {

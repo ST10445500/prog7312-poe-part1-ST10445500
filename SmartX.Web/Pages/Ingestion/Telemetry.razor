@@ -82,8 +82,9 @@ else
         <div class="card-body">
             <h5 class="card-title">Record a Test Reading</h5>
             <p class="text-muted small">
-                There is no simulator yet, so this posts a reading by hand through the
-                same <code>/api/telemetry</code> endpoint a real device would use.
+                The simulator reports for the fleet on its own, and this posts one reading
+                by hand through the same <code>/api/telemetry</code> endpoint it and a real
+                device both use.
             </p>
 
             @if (_readingSucceeded)
@@ -112,7 +113,7 @@ else
                         <label class="form-label">
                             @(SelectedCategory == SensorCategory.Environmental ? "Value (%)" : "Value (W)")
                         </label>
-                        <input type="number" class="form-control" @bind="_testValue" />
+                        <input type="number" class="form-control" @bind="_testValue" @bind:event="oninput" />
                     </div>
                 }
                 else if (SelectedCategory == SensorCategory.Actuator)
@@ -120,14 +121,14 @@ else
                     <div class="col-12 col-md-4">
                         <label class="form-label">State</label>
                         <select class="form-select" @bind="_testState">
-                            <option value="true">Open</option>
-                            <option value="false">Closed</option>
+                            <option value="@(true)">Open</option>
+                            <option value="@(false)">Closed</option>
                         </select>
                     </div>
                 }
 
                 <div class="col-12 col-md-4">
-                    <button class="btn btn-primary" @onclick="RecordTestReadingAsync" disabled="@_isSubmittingReading">
+                    <button class="btn btn-primary" @onclick="RecordTestReadingAsync" disabled="@(_isSubmittingReading || ValueProblem != null)">
                         @if (_isSubmittingReading)
                         {
                             <span class="spinner-border spinner-border-sm me-2"></span>
@@ -135,6 +136,13 @@ else
                         @(_isSubmittingReading ? "Recording..." : "Record Reading")
                     </button>
                 </div>
+
+                @if (ValueProblem != null)
+                {
+                    <div class="col-12">
+                        <span class="validation-message">@ValueProblem</span>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -158,6 +166,39 @@ else
 
     private SensorCategory? SelectedCategory =>
         _sensors?.FirstOrDefault(sensor => sensor.MacAddress == _selectedMac)?.Category;
+
+    //describes what is wrong with the typed value, or null when it is ready to post
+    private string? ValueProblem
+    {
+        get
+        {
+            // An actuator carries a state rather than a number, and the dropdown
+            // cannot be left empty, so there is nothing to check.
+            if (SelectedCategory == SensorCategory.Actuator)
+            {
+                return null;
+            }
+
+            if (_testValue == null)
+            {
+                return "Enter a reading first.";
+            }
+
+            // These are the same bounds TelemetryController enforces, checked here
+            // so the gateway never has to turn the reading away.
+            if (SelectedCategory == SensorCategory.Environmental && _testValue is < 0 or > 100)
+            {
+                return "A moisture reading has to be between 0 and 100 percent.";
+            }
+
+            if (SelectedCategory == SensorCategory.PowerConsumption && _testValue < 0)
+            {
+                return "A power meter cannot draw less than nothing.";
+            }
+
+            return null;
+        }
+    }
 
     private static string FormatLatestReading(SensorOverview sensor)
     {

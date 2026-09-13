@@ -9,48 +9,10 @@ using SmartX.Shared.Models;
 
 namespace SmartX.Web.Services
 {
-    //turns the registered fleet into a deployment tree, and builds example trees for testing the validator
+    //builds example trees for trying the validator out
+    //the deployment the gateway is running comes from the api, not from here
     public static class DeploymentTreeBuilder
     {
-        private const string RootName = "Smart-X Gateway";
-
-        //..............................................................................//
-
-        //groups the fleet by zone then room, with each sensor as a leaf named by its node id
-        public static DeploymentNode BuildFromSensors(IEnumerable<SensorRegistration> sensors)
-        {
-            var zoneNodes = sensors
-                .GroupBy(sensor => sensor.Location.Zone)
-                .Select(zoneGroup =>
-                {
-                    var roomNodes = zoneGroup
-                        .GroupBy(sensor => sensor.Location.Room)
-                        .Select(roomGroup => new DeploymentNode
-                        {
-                            Name = roomGroup.Key,
-                            Children = roomGroup.Select(SensorLeaf).ToList()
-                        })
-                        .ToList();
-
-                    return new DeploymentNode { Name = zoneGroup.Key, Children = roomNodes };
-                })
-                .ToList();
-
-            return new DeploymentNode { Name = RootName, Children = zoneNodes };
-        }
-
-        //..............................................................................//
-
-        //builds a leaf node for one sensor, named by its node id
-        private static DeploymentNode SensorLeaf(SensorRegistration sensor)
-        {
-            return new DeploymentNode
-            {
-                Name = sensor.Location.NodeId,
-                SensorMacAddress = sensor.MacAddress
-            };
-        }
-
         //..............................................................................//
 
         //builds a tree with a duplicate sibling name and a sensor that also has a child

@@ -136,16 +136,116 @@ else if (_activeTab == "register")
 }
 else if (_activeTab == "hierarchy")
 {
+    <datalist id="@MacListId">
+        @if (_sensors != null)
+        {
+            @foreach (var sensor in _sensors)
+            {
+                <option value="@sensor.MacAddress"></option>
+            }
+        }
+    </datalist>
+
     <div class="card mb-4">
         <div class="card-body">
             <h5 class="card-title">Deployment Hierarchy</h5>
             <p class="text-muted small">
-                Built from the registered fleet, grouped by zone then room.
+                The deployment the gateway is running. A sensor first appears under the
+                zone and room it registered with, and this is what says where it sits
+                after that.
             </p>
 
-            @if (_sensors != null)
+            @if (_editTree != null)
             {
-                <DeploymentTreeNode Node="DeploymentTreeBuilder.BuildFromSensors(_sensors)" />
+                <div class="border rounded p-3">
+                    <DeploymentTreeEditor Node="_editTree"
+                                          MacListId="@MacListId"
+                                          DefaultMacAddress="@DefaultMacAddress"
+                                          MoveTargets="DeploymentTreeOperations.ZonePaths(_editTree)"
+                                          OnChanged="OnEditTreeChanged"
+                                          OnMove="MoveNode" />
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button class="btn btn-outline-primary" @onclick="ValidateEditAsync" disabled="@_isValidating">
+                        @if (_isValidating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        @(_isValidating ? "Validating..." : "Validate")
+                    </button>
+
+                    <button class="btn btn-primary" @onclick="SaveDeploymentAsync" disabled="@(!_editValidated || _isSaving)">
+                        @if (_isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        @(_isSaving ? "Saving..." : "Save")
+                    </button>
+
+                    <button class="btn btn-outline-secondary" @onclick="CancelEditing">Cancel</button>
+
+                    @if (!_editValidated)
+                    {
+                        <span class="text-muted small align-self-center">
+                            Validate the tree before it can be saved.
+                        </span>
+                    }
+                </div>
+
+                @if (_editResult != null)
+                {
+                    <div class="mt-3">
+                        <span class="badge @(_editResult.IsValid ? "bg-success" : "bg-danger") me-2">
+                            @(_editResult.IsValid ? "Valid" : "Rejected")
+                        </span>
+                        <span class="badge bg-secondary me-2">@_editResult.NodesChecked nodes checked</span>
+                        <span class="badge bg-secondary me-2">deepest level @_editResult.DeepestLevel</span>
+                        <span class="badge bg-secondary">@_editResult.SensorsFound sensors</span>
+
+                        @if (_editResult.Errors.Count > 0)
+                        {
+                            <ul class="mt-3">
+                                @foreach (var error in _editResult.Errors)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                }
+
+                @if (_editError != null)
+                {
+                    <div class="alert alert-danger mt-3">@_editError</div>
+                }
+
+                @if (UnplacedSensors.Count > 0)
+                {
+                    <hr />
+
+                    <h6>Unplaced sensors</h6>
+                    <p class="text-muted small">
+                        Registered with the gateway but not in the tree. Adding one puts it
+                        back under the zone and room it registered with.
+                    </p>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var sensor in UnplacedSensors)
+                        {
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => PlaceSensor(sensor)">
+                                Add @sensor.Location.NodeId
+                                <span class="font-monospace ms-1">@sensor.MacAddress</span>
+                            </button>
+                        }
+                    </div>
+                }
+            }
+            else if (_deploymentTree != null)
+            {
+                <DeploymentTreeNode Node="_deploymentTree" />
+
+                <button class="btn btn-primary mt-3" @onclick="StartEditing">Edit deployment</button>
             }
             else if (!_loadFailed)
             {
@@ -164,12 +264,7 @@ else if (_activeTab == "hierarchy")
             </p>
 
             <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                <span class="text-muted small">Start from:</span>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadActiveHierarchy">
-                    Active hierarchy
-                </button>
-
-                <span class="text-muted small ms-3">Demo examples, for trying the validator:</span>
+                <span class="text-muted small">Demo examples, for trying the validator:</span>
                 <button class="btn btn-sm btn-outline-secondary" @onclick="LoadBrokenExample">
                     Broken tree
                 </button>
@@ -177,16 +272,6 @@ else if (_activeTab == "hierarchy")
                     40 levels deep
                 </button>
             </div>
-
-            <datalist id="@MacListId">
-                @if (_sensors != null)
-                {
-                    @foreach (var sensor in _sensors)
-                    {
-                        <option value="@sensor.MacAddress"></option>
-                    }
-                }
-            </datalist>
 
             @if (_jsonMode)
             {
@@ -363,6 +448,12 @@ else if (_activeTab == "files")
 
     private static readonly JsonSerializerOptions TreeDisplayOptions = new(ApiJsonOptions.Default) { WriteIndented = true };
 
+    private DeploymentNode? _deploymentTree;
+    private DeploymentNode? _editTree;
+    private DeploymentValidationResult? _editResult;
+    private string? _editError;
+    private bool _editValidated;
+    private bool _isSaving;
     private DeploymentNode _customTree = new DeploymentNode { Name = "Facility A" };
     private DeploymentValidationResult? _customTreeResult;
     private string? _customTreeParseError;
@@ -397,6 +488,7 @@ else if (_activeTab == "files")
     protected override async Task OnInitializedAsync()
     {
         await LoadSensorsAsync();
+        await LoadDeploymentAsync();
 
         if (_sensors is { Count: > 0 })
         {
@@ -404,6 +496,176 @@ else if (_activeTab == "files")
         }
 
         await LoadAttachmentsAsync();
+    }
+
+    private void StartEditing()
+    {
+        if (_deploymentTree == null)
+        {
+            return;
+        }
+
+        // Editing a copy is what lets Cancel simply throw the whole thing away.
+        _editTree = DeploymentTreeOperations.Clone(_deploymentTree);
+        _editResult = null;
+        _editError = null;
+        _editValidated = false;
+    }
+
+    private void CancelEditing()
+    {
+        _editTree = null;
+        _editResult = null;
+        _editError = null;
+        _editValidated = false;
+    }
+
+    //the registered sensors the tree being edited does not place anywhere
+    private List<SensorRegistration> UnplacedSensors
+    {
+        get
+        {
+            if (_editTree == null || _sensors == null)
+            {
+                return new List<SensorRegistration>();
+            }
+
+            var placed = DeploymentTreeOperations.MacAddressesIn(_editTree);
+
+            return _sensors
+                .Where(sensor => !placed.Contains(sensor.MacAddress))
+                .ToList();
+        }
+    }
+
+    private void PlaceSensor(SensorRegistration sensor)
+    {
+        if (_editTree == null)
+        {
+            return;
+        }
+
+        DeploymentTreeOperations.PlaceAtRegisteredLocation(_editTree, sensor);
+        OnEditTreeChanged();
+    }
+
+    private void OnEditTreeChanged()
+    {
+        // A pass describes the tree as it was when it was checked, so changing
+        // anything afterwards has to put Save back out of reach.
+        _editResult = null;
+        _editValidated = false;
+    }
+
+    private async Task ValidateEditAsync()
+    {
+        if (_editTree == null)
+        {
+            return;
+        }
+
+        _editResult = null;
+        _editError = null;
+        _editValidated = false;
+        _isValidating = true;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/deployment/validate", _editTree, ApiJsonOptions.Default);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _editResult = await response.Content.ReadFromJsonAsync<DeploymentValidationResult>(ApiJsonOptions.Default);
+                _editValidated = _editResult is { IsValid: true };
+            }
+            else
+            {
+                _editError = await response.Content.ReadAsStringAsync();
+            }
+        }
+        catch (HttpRequestException)
+        {
+            _editError = "Could not reach the gateway API.";
+        }
+        finally
+        {
+            _isValidating = false;
+        }
+    }
+
+    private async Task SaveDeploymentAsync()
+    {
+        if (_editTree == null || !_editValidated)
+        {
+            return;
+        }
+
+        _editError = null;
+        _isSaving = true;
+
+        try
+        {
+            var response = await Http.PutAsJsonAsync("api/deployment", _editTree, ApiJsonOptions.Default);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _editTree = null;
+                _editResult = null;
+                _editValidated = false;
+
+                await LoadDeploymentAsync();
+            }
+            else
+            {
+                // The gateway checks the tree again before it keeps anything, so a
+                // refusal comes back as the same result shape the validate button
+                // already knows how to show.
+                _editResult = await response.Content.ReadFromJsonAsync<DeploymentValidationResult>(ApiJsonOptions.Default);
+                _editValidated = false;
+
+                if (_editResult == null)
+                {
+                    _editError = "The gateway would not accept that deployment.";
+                }
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException)
+        {
+            _editError = "Could not reach the gateway API.";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void MoveNode(DeploymentMove move)
+    {
+        if (_editTree == null)
+        {
+            return;
+        }
+
+        // Taking it out first means a node cannot end up listed under two parents
+        // if anything about the target ever changes.
+        if (DeploymentTreeOperations.Detach(_editTree, move.Node))
+        {
+            move.Target.Children.Add(move.Node);
+        }
+
+        OnEditTreeChanged();
+    }
+
+    private async Task LoadDeploymentAsync()
+    {
+        try
+        {
+            _deploymentTree = await Http.GetFromJsonAsync<DeploymentNode>("api/deployment", ApiJsonOptions.Default);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException)
+        {
+            _loadFailed = true;
+        }
     }
 
     private async Task LoadSensorsAsync()
@@ -467,12 +729,6 @@ else if (_activeTab == "files")
         StateHasChanged();
         await Task.Delay(AlertTimeoutMilliseconds);
         _registerSucceeded = false;
-    }
-
-    private void LoadActiveHierarchy()
-    {
-        var fleet = _sensors ?? new List<SensorRegistration>();
-        LoadCustomTree(DeploymentTreeBuilder.BuildFromSensors(fleet));
     }
 
     private void LoadBrokenExample()

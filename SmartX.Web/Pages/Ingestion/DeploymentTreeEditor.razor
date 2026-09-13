@@ -1,3 +1,5 @@
+@using SmartX.Web.Services
+
 <div class="d-flex flex-wrap align-items-center gap-2 py-1">
     <input class="form-control form-control-sm" style="max-width: 220px;" value="@Node.Name" @onchange="NameChangedAsync" />
 
@@ -10,6 +12,17 @@
     {
         <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AddZoneAsync">+ Zone</button>
         <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AddSensorAsync">+ Sensor</button>
+    }
+
+    @if (OnMove.HasDelegate && AvailableTargets.Count > 0)
+    {
+        <select class="form-select form-select-sm" style="max-width: 240px;" value="" @onchange="MoveChosenAsync">
+            <option value="">Move to...</option>
+            @foreach (var target in AvailableTargets)
+            {
+                <option value="@target.Path">@target.Path</option>
+            }
+        </select>
     }
 
     @if (OnRemove.HasDelegate)
@@ -27,7 +40,9 @@
                                   Node="child"
                                   MacListId="@MacListId"
                                   DefaultMacAddress="@DefaultMacAddress"
+                                  MoveTargets="MoveTargets"
                                   OnChanged="OnChanged"
+                                  OnMove="OnMove"
                                   OnRemove="@(() => RemoveChildAsync(child))" />
         }
     </div>
@@ -44,10 +59,44 @@
     public string DefaultMacAddress { get; set; } = string.Empty;
 
     [Parameter]
+    public List<DeploymentTarget> MoveTargets { get; set; } = new List<DeploymentTarget>();
+
+    [Parameter]
     public EventCallback OnChanged { get; set; }
 
     [Parameter]
+    public EventCallback<DeploymentMove> OnMove { get; set; }
+
+    [Parameter]
     public EventCallback OnRemove { get; set; }
+
+    // Somewhere inside this node is not a place this node can go. Moving a branch
+    // into its own child would take the whole branch out of the tree with it.
+    private List<DeploymentTarget> AvailableTargets =>
+        MoveTargets
+            .Where(target => !DeploymentTreeOperations.Contains(Node, target.Node))
+            .ToList();
+
+    private async Task MoveChosenAsync(ChangeEventArgs e)
+    {
+        var path = e.Value?.ToString();
+
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        var target = MoveTargets.FirstOrDefault(candidate => candidate.Path == path);
+
+        if (target == null)
+        {
+            return;
+        }
+
+        // The page owns the move, because taking the node out of one parent and
+        // putting it under another reaches further than this component can see.
+        await OnMove.InvokeAsync(new DeploymentMove { Node = Node, Target = target.Node });
+    }
 
     private async Task NameChangedAsync(ChangeEventArgs e)
     {

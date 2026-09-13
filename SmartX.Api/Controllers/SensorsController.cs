@@ -16,10 +16,12 @@ namespace SmartX.Api.Controllers
     public class SensorsController : ControllerBase
     {
         private readonly SensorStore _store;
+        private readonly DeploymentStore _deployment;
 
-        public SensorsController(SensorStore store)
+        public SensorsController(SensorStore store, DeploymentStore deployment)
         {
             _store = store;
+            _deployment = deployment;
         }
 
         //..............................................................................//
@@ -32,6 +34,11 @@ namespace SmartX.Api.Controllers
             {
                 return Conflict($"A sensor with mac address {sensor.MacAddress} is already registered.");
             }
+
+            // The location a device registers with is where it first appears in the
+            // deployment tree. After that the tree is what says where it sits, and
+            // moving it there does not change what it registered as.
+            _deployment.Place(sensor);
 
             return CreatedAtAction(nameof(GetByMacAddress), new { macAddress = sensor.MacAddress }, sensor);
         }

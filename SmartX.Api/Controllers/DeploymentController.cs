@@ -17,16 +17,57 @@ namespace SmartX.Api.Controllers
     [Route("api/deployment")]
     public class DeploymentController : ControllerBase
     {
+        //what the gateway says when the body is not a tree it can read
+        private const string UnreadableTree = "The deployment tree could not be read. It is either missing, malformed, or nested far deeper than a real deployment would be.";
+
         private static readonly JsonSerializerOptions TreeJsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
             MaxDepth = 256
         };
 
         private readonly DeploymentTreeValidator _validator;
+        private readonly DeploymentStore _store;
 
-        public DeploymentController(DeploymentTreeValidator validator)
+        public DeploymentController(DeploymentTreeValidator validator, DeploymentStore store)
         {
             _validator = validator;
+            _store = store;
+        }
+
+        //..............................................................................//
+
+        //retrieves the deployment tree the gateway is running
+        [HttpGet]
+        public ActionResult<DeploymentNode> Get()
+        {
+            return _store.Get();
+        }
+
+        //..............................................................................//
+
+        //replaces the deployment tree, refusing one the validator turns down
+        [HttpPut]
+        public async Task<ActionResult<DeploymentValidationResult>> Replace()
+        {
+            var root = await ReadTreeAsync();
+
+            if (root == null)
+            {
+                return BadRequest(UnreadableTree);
+            }
+
+            var result = _validator.Validate(root);
+
+            // The client validates before it offers to save, but that is only for
+            // feedback. Nothing stops a tree arriving here another way, so the
+            // gateway checks again before it keeps anything.
+            if (!result.IsValid)
+            {
+                return BadRequest(result);
+            }
+
+            _store.Replace(root);
+            return result;
         }
 
         //..............................................................................//
@@ -34,6 +75,21 @@ namespace SmartX.Api.Controllers
         //validates a deployment tree such as zone, sub-zone, sensor
         [HttpPost("validate")]
         public async Task<ActionResult<DeploymentValidationResult>> Validate()
+        {
+            var root = await ReadTreeAsync();
+
+            if (root == null)
+            {
+                return BadRequest(UnreadableTree);
+            }
+
+            return _validator.Validate(root);
+        }
+
+        //..............................................................................//
+
+        //reads a deployment tree from the request body, or null if there is not one to read
+        private async Task<DeploymentNode?> ReadTreeAsync()
         {
             // The tree is read here rather than through a method parameter.
             // Model binding gives up on a deeply nested body and fails with a
@@ -47,26 +103,17 @@ namespace SmartX.Api.Controllers
 
             if (string.IsNullOrWhiteSpace(body))
             {
-                return BadRequest("No deployment tree was supplied.");
+                return null;
             }
-
-            DeploymentNode? root;
 
             try
             {
-                root = JsonSerializer.Deserialize<DeploymentNode>(body, TreeJsonOptions);
+                return JsonSerializer.Deserialize<DeploymentNode>(body, TreeJsonOptions);
             }
             catch (JsonException)
             {
-                return BadRequest("The deployment tree could not be read. It is either malformed or nested far deeper than a real deployment would be.");
+                return null;
             }
-
-            if (root == null)
-            {
-                return BadRequest("No deployment tree was supplied.");
-            }
-
-            return _validator.Validate(root);
         }
     }
 }

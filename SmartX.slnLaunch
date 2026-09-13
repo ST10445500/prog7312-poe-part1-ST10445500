@@ -9,6 +9,10 @@
       {
         "Path": "SmartX.Web\\SmartX.Web.csproj",
         "Action": "Start"
+      },
+      {
+        "Path": "SmartX.Simulator\\SmartX.Simulator.csproj",
+        "Action": "Start"
       }
     ]
   }

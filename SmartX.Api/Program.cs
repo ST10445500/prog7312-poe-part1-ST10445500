@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Application services
 builder.Services.AddSingleton<SensorStore>();
+builder.Services.AddSingleton<DeploymentStore>();
 builder.Services.AddSingleton<DeploymentTreeValidator>();
 builder.Services.AddSingleton<TelemetryStore>();
 builder.Services.AddSingleton<TelemetryHealth>();
@@ -41,7 +42,11 @@ var app = builder.Build();
 
 // The gateway comes up with a small demo facility already registered, so the
 // dashboard has a fleet to draw before any device has reported anything.
-DemoFleet.Seed(app.Services.GetRequiredService<SensorStore>());
+var seededSensors = app.Services.GetRequiredService<SensorStore>();
+DemoFleet.Seed(seededSensors);
+
+// The tree is built from the fleet, so the fleet has to be registered first.
+app.Services.GetRequiredService<DeploymentStore>().SeedFromFleet(seededSensors.GetAll());
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -324,9 +324,9 @@ else if (_activeTab == "files")
             {
                 <div class="alert alert-success">File uploaded.</div>
             }
-            @if (_uploadError != null)
+            @if (_attachmentError != null)
             {
-                <div class="alert alert-danger">@_uploadError</div>
+                <div class="alert alert-danger">@_attachmentError</div>
             }
 
             <div class="row g-3 align-items-end">
@@ -382,7 +382,7 @@ else if (_activeTab == "files")
     private IBrowserFile? _selectedFile;
     private bool _isUploading;
     private bool _uploadSucceeded;
-    private string? _uploadError;
+    private string? _attachmentError;
 
     private void ShowTab(string tab)
     {
@@ -614,7 +614,23 @@ else if (_activeTab == "files")
     private async Task ConfirmDeleteAsync(string attachmentId)
     {
         _pendingDeleteId = null;
-        await Http.DeleteAsync($"api/sensors/{_attachmentsMac}/attachments/{attachmentId}");
+        _attachmentError = null;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/sensors/{_attachmentsMac}/attachments/{attachmentId}");
+
+            // Without this the file simply stayed in the list and nothing said why.
+            if (!response.IsSuccessStatusCode)
+            {
+                _attachmentError = await response.Content.ReadAsStringAsync();
+            }
+        }
+        catch (HttpRequestException)
+        {
+            _attachmentError = "Could not reach the gateway API.";
+        }
+
         await LoadAttachmentsAsync();
     }
 
@@ -637,7 +653,7 @@ else if (_activeTab == "files")
     {
         _selectedFile = e.File;
         _uploadSucceeded = false;
-        _uploadError = null;
+        _attachmentError = null;
     }
 
     private async Task UploadAsync()
@@ -649,7 +665,7 @@ else if (_activeTab == "files")
 
         _isUploading = true;
         _uploadSucceeded = false;
-        _uploadError = null;
+        _attachmentError = null;
 
         try
         {
@@ -668,12 +684,12 @@ else if (_activeTab == "files")
             }
             else
             {
-                _uploadError = await response.Content.ReadAsStringAsync();
+                _attachmentError = await response.Content.ReadAsStringAsync();
             }
         }
         catch (HttpRequestException)
         {
-            _uploadError = "Could not reach the gateway API.";
+            _attachmentError = "Could not reach the gateway API.";
         }
         finally
         {

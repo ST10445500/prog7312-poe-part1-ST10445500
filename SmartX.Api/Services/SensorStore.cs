@@ -31,10 +31,22 @@ namespace SmartX.Api.Services
 
         //..............................................................................//
 
-        //retrieves every sensor registered with the gateway
+        //retrieves every sensor registered with the gateway, in deployment order
         public List<SensorRegistration> GetAll()
         {
-            return _sensors.Values.ToList();
+            // A ConcurrentDictionary hands its values back in whatever order it
+            // happens to hold them, which left the fleet table, the dashboard cards
+            // and every sensor dropdown in a jumbled order. Sorting here means each
+            // caller does not have to remember to.
+            // Zone, room and node read the way someone would walk the building. A
+            // mac address sorts just as reliably but says nothing about where a
+            // sensor is, so it is only the tie breaker.
+            return _sensors.Values
+                .OrderBy(sensor => sensor.Location.Zone, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(sensor => sensor.Location.Room, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(sensor => sensor.Location.NodeId, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(sensor => sensor.MacAddress, StringComparer.Ordinal)
+                .ToList();
         }
 
         //..............................................................................//

@@ -39,6 +39,10 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// The gateway comes up with a small demo facility already registered, so the
+// dashboard has a fleet to draw before any device has reported anything.
+DemoFleet.Seed(app.Services.GetRequiredService<SensorStore>());
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

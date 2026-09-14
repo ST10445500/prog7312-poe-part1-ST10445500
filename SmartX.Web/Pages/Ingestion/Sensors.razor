@@ -20,6 +20,11 @@
     </div>
 }
 
+@if (_registerSucceeded)
+{
+    <div class="alert alert-success">Sensor registered. Drag it into the deployment below.</div>
+}
+
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
         <button type="button" class="nav-link @TabClass("fleet")" @onclick='() => ShowTab("fleet")'>Fleet</button>
@@ -55,6 +60,7 @@
             <table class="table table-striped table-hover align-middle">
                 <thead>
                     <tr>
+                        <th>Name</th>
                         <th>Mac Address</th>
                         <th>Location</th>
                         <th>Category</th>
@@ -65,8 +71,9 @@
                     @foreach (var sensor in _sensors)
                     {
                         <tr>
+                            <td>@sensor.Location.NodeId</td>
                             <td class="font-monospace">@sensor.MacAddress</td>
-                            <td>@sensor.Location.Zone / @sensor.Location.Room / @sensor.Location.NodeId</td>
+                            <td>@DescribeLocation(sensor)</td>
                             <td>@sensor.Category</td>
                             <td>@sensor.RegisteredAt.ToLocalTime().ToString("g")</td>
                         </tr>
@@ -86,33 +93,21 @@ else if (_activeTab == "register")
                 <DataAnnotationsValidator />
                 <ValidationSummary />
 
-                @if (_registerSucceeded)
-                {
-                    <div class="alert alert-success">Sensor registered.</div>
-                }
                 @if (_registerError != null)
                 {
                     <div class="alert alert-danger">@_registerError</div>
                 }
 
                 <div class="row g-3">
-                    <div class="col-12 col-md-6">
+                    <div class="col-12 col-md-5">
                         <label class="form-label">Mac Address</label>
-                        <InputText class="form-control" @bind-Value="_newSensor.MacAddress" placeholder="AA:BB:CC:DD:EE:FF" />
+                        <InputText class="form-control font-monospace" @bind-Value="_newSensor.MacAddress" placeholder="AA:BB:CC:DD:EE:FF" />
                     </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label">Zone</label>
-                        <InputText class="form-control" @bind-Value="_newSensor.Location.Zone" />
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">Name</label>
+                        <InputText class="form-control" @bind-Value="_newSensor.Location.NodeId" placeholder="soil probe" />
                     </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label">Room</label>
-                        <InputText class="form-control" @bind-Value="_newSensor.Location.Room" />
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label">Node Id</label>
-                        <InputText class="form-control" @bind-Value="_newSensor.Location.NodeId" />
-                    </div>
-                    <div class="col-6 col-md-3">
+                    <div class="col-12 col-md-3">
                         <label class="form-label">Category</label>
                         <InputSelect class="form-select" @bind-Value="_newSensor.Category">
                             @foreach (var category in Enum.GetValues<SensorCategory>())
@@ -157,6 +152,30 @@ else if (_activeTab == "hierarchy")
 
             @if (_editTree != null)
             {
+                @if (UnplacedSensors.Count > 0)
+                {
+                    <div class="alert alert-secondary">
+                        <strong>Waiting to be placed</strong>
+                        <p class="small mb-2">
+                            Registered with the gateway but not in the deployment yet. Drag one
+                            onto a zone below, or click it to drop it at the top level.
+                        </p>
+
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var sensor in UnplacedSensors)
+                            {
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        draggable="true"
+                                        @ondragstart="() => StartDraggingUnplaced(sensor)"
+                                        @onclick="() => PlaceSensor(sensor)">
+                                    @sensor.Location.NodeId
+                                    <span class="font-monospace ms-1 text-muted">@sensor.MacAddress</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+
                 @if (_jsonMode)
                 {
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
@@ -252,26 +271,6 @@ else if (_activeTab == "hierarchy")
                     <div class="alert alert-danger mt-3">@_editError</div>
                 }
 
-                @if (UnplacedSensors.Count > 0)
-                {
-                    <hr />
-
-                    <h6>Unplaced sensors</h6>
-                    <p class="text-muted small">
-                        Registered with the gateway but not in the tree. Adding one puts it
-                        back under the zone and room it registered with.
-                    </p>
-
-                    <div class="d-flex flex-wrap gap-2">
-                        @foreach (var sensor in UnplacedSensors)
-                        {
-                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => PlaceSensor(sensor)">
-                                Add @sensor.Location.NodeId
-                                <span class="font-monospace ms-1">@sensor.MacAddress</span>
-                            </button>
-                        }
-                    </div>
-                }
             }
             else if (_deploymentTree != null)
             {
@@ -497,8 +496,42 @@ else if (_activeTab == "files")
             return;
         }
 
-        DeploymentTreeOperations.PlaceAtRegisteredLocation(_editTree, sensor);
+        // Clicking drops it at the top level, where it is easy to see and then drag
+        // somewhere better. A sensor registered by name has no zone to go back to.
+        _editTree.Children.Add(SensorLeafFor(sensor));
         OnEditTreeChanged();
+    }
+
+    private void StartDraggingUnplaced(SensorRegistration sensor)
+    {
+        // The leaf is built here rather than when it lands, so the drop handlers do
+        // not have to care whether what they were given is already in the tree.
+        _draggedNode = SensorLeafFor(sensor);
+    }
+
+    //describes where a sensor sits, or says so when it is not in the tree yet
+    private static string DescribeLocation(SensorRegistration sensor)
+    {
+        if (string.IsNullOrWhiteSpace(sensor.Location.Zone))
+        {
+            return "Not placed";
+        }
+
+        if (string.Equals(sensor.Location.Zone, sensor.Location.Room, StringComparison.OrdinalIgnoreCase))
+        {
+            return sensor.Location.Zone;
+        }
+
+        return $"{sensor.Location.Zone} / {sensor.Location.Room}";
+    }
+
+    private static DeploymentNode SensorLeafFor(SensorRegistration sensor)
+    {
+        return new DeploymentNode
+        {
+            Name = sensor.Location.NodeId,
+            SensorMacAddress = sensor.MacAddress
+        };
     }
 
     private void OnEditTreeChanged()
@@ -664,7 +697,15 @@ else if (_activeTab == "files")
             {
                 _registerSucceeded = true;
                 _newSensor = new SensorRegistration();
+
                 await LoadSensorsAsync();
+                await LoadDeploymentAsync();
+
+                // A sensor registered by name is not in the deployment yet, so the
+                // next thing to do is put it somewhere. This opens the tab already in
+                // edit mode, with the new sensor waiting at the top.
+                _activeTab = "hierarchy";
+                StartEditing();
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
             {

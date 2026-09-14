@@ -27,11 +27,13 @@ namespace SmartX.Api.Controllers
 
         private readonly DeploymentTreeValidator _validator;
         private readonly DeploymentStore _store;
+        private readonly SensorStore _sensors;
 
-        public DeploymentController(DeploymentTreeValidator validator, DeploymentStore store)
+        public DeploymentController(DeploymentTreeValidator validator, DeploymentStore store, SensorStore sensors)
         {
             _validator = validator;
             _store = store;
+            _sensors = sensors;
         }
 
         //..............................................................................//
@@ -67,6 +69,12 @@ namespace SmartX.Api.Controllers
             }
 
             _store.Replace(root);
+
+            // Where a sensor sits is now the tree's answer, so each registration is
+            // brought back in line with it rather than keeping whatever it was
+            // registered with.
+            _store.ApplyLocationsTo(_sensors);
+
             return result;
         }
 

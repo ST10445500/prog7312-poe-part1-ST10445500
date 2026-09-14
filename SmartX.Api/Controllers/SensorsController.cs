@@ -35,10 +35,14 @@ namespace SmartX.Api.Controllers
                 return Conflict($"A sensor with mac address {sensor.MacAddress} is already registered.");
             }
 
-            // The location a device registers with is where it first appears in the
-            // deployment tree. After that the tree is what says where it sits, and
-            // moving it there does not change what it registered as.
-            _deployment.Place(sensor);
+            // A registration that already says which zone and room it belongs to is
+            // placed straight away, which is how the demo fleet and anything posting
+            // a full record still end up in the tree. One registered with just a name
+            // is left out of it, and shows up as unplaced for someone to drag in.
+            if (!string.IsNullOrWhiteSpace(sensor.Location.Zone) && !string.IsNullOrWhiteSpace(sensor.Location.Room))
+            {
+                _deployment.Place(sensor);
+            }
 
             return CreatedAtAction(nameof(GetByMacAddress), new { macAddress = sensor.MacAddress }, sensor);
         }

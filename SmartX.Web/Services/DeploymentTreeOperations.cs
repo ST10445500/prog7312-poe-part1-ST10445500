@@ -51,10 +51,10 @@ namespace SmartX.Web.Services
                 return false;
             }
 
-            if (!Detach(root, node))
-            {
-                return false;
-            }
+            // Detaching is allowed to find nothing. A sensor dragged in from the
+            // unplaced list is a brand new leaf that was never in the tree, so this is
+            // "put it here" rather than strictly "move it".
+            Detach(root, node);
 
             zone.Children.Add(node);
             return true;
@@ -70,10 +70,7 @@ namespace SmartX.Web.Services
                 return false;
             }
 
-            if (!Detach(root, node))
-            {
-                return false;
-            }
+            Detach(root, node);
 
             // The index is looked up after the detach on purpose. Taking the node out
             // first shifts everything after it along, so a position worked out
@@ -143,42 +140,6 @@ namespace SmartX.Web.Services
             }
         }
 
-        //..............................................................................//
-
-        //puts a sensor back under the zone and room it registered with
-        public static void PlaceAtRegisteredLocation(DeploymentNode root, SensorRegistration sensor)
-        {
-            // The same placement the gateway does when a sensor first registers, so a
-            // sensor taken out of the tree goes back where it started rather than
-            // landing at the root for someone to move by hand.
-            var zone = ChildNamed(root, sensor.Location.Zone);
-            var room = ChildNamed(zone, sensor.Location.Room);
-
-            room.Children.Add(new DeploymentNode
-            {
-                Name = sensor.Location.NodeId,
-                SensorMacAddress = sensor.MacAddress
-            });
-        }
-
-        //..............................................................................//
-
-        //retrieves the child with this name, adding it if the tree does not have one yet
-        private static DeploymentNode ChildNamed(DeploymentNode parent, string name)
-        {
-            var existing = parent.Children
-                .FirstOrDefault(child => string.Equals(child.Name, name, StringComparison.OrdinalIgnoreCase));
-
-            if (existing != null)
-            {
-                return existing;
-            }
-
-            var added = new DeploymentNode { Name = name };
-            parent.Children.Add(added);
-
-            return added;
-        }
     }
 
     //..............................................................................//

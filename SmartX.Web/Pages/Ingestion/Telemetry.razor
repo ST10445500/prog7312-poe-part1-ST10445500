@@ -52,10 +52,9 @@ else
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
-                                <h6 class="mb-0 font-monospace">@sensor.MacAddress</h6>
-                                <span class="text-muted small">
-                                    @sensor.Location.Zone / @sensor.Location.Room / @sensor.Location.NodeId
-                                </span>
+                                <h6 class="mb-0">@sensor.Location.NodeId</h6>
+                                <span class="text-muted small font-monospace">@sensor.MacAddress</span>
+                                <span class="text-muted small">@DescribeLocation(sensor)</span>
                             </div>
                             <span class="badge text-bg-secondary">@sensor.Category</span>
                         </div>
@@ -198,6 +197,22 @@ else
 
             return null;
         }
+    }
+
+    //describes where a sensor sits, or says so when it is not in the tree yet
+    private static string DescribeLocation(SensorOverview sensor)
+    {
+        if (string.IsNullOrWhiteSpace(sensor.Location.Zone))
+        {
+            return "Not placed";
+        }
+
+        if (string.Equals(sensor.Location.Zone, sensor.Location.Room, StringComparison.OrdinalIgnoreCase))
+        {
+            return sensor.Location.Zone;
+        }
+
+        return $"{sensor.Location.Zone} / {sensor.Location.Room}";
     }
 
     private static string FormatLatestReading(SensorOverview sensor)

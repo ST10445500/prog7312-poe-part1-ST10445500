@@ -60,6 +60,22 @@ namespace SmartX.Api.Services
 
         //..............................................................................//
 
+        //records where a sensor sits, worked out from the deployment tree
+        public void SetLocation(string macAddress, string zone, string room)
+        {
+            var sensor = Find(macAddress);
+
+            if (sensor == null)
+            {
+                return;
+            }
+
+            sensor.Location.Zone = zone;
+            sensor.Location.Room = room;
+        }
+
+        //..............................................................................//
+
         //checks whether a mac address belongs to a registered sensor
         public bool IsRegistered(string macAddress)
         {

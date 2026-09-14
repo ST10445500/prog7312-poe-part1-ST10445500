@@ -36,19 +36,12 @@ namespace SmartX.Shared.Models
         {
             // Blazor's DataAnnotationsValidator only checks the properties on this
             // class, not the ones inside Location, so those checks have to happen here.
-            if (string.IsNullOrWhiteSpace(Location.Zone))
-            {
-                yield return new ValidationResult("Zone is required.", new[] { nameof(Location) });
-            }
-
-            if (string.IsNullOrWhiteSpace(Location.Room))
-            {
-                yield return new ValidationResult("Room is required.", new[] { nameof(Location) });
-            }
-
+            // Zone and room are not asked for. A sensor is registered with a name and
+            // then dragged into the deployment tree, and saving that tree is what
+            // fills the two of them in.
             if (string.IsNullOrWhiteSpace(Location.NodeId))
             {
-                yield return new ValidationResult("Node id is required.", new[] { nameof(Location) });
+                yield return new ValidationResult("Name is required.", new[] { nameof(Location) });
             }
         }
     }
@@ -56,12 +49,13 @@ namespace SmartX.Shared.Models
     //..............................................................................//
 
     //the zone, room and node a sensor is deployed at
+    //the node id is the sensor's name, and is the only one given at registration
     public class DeploymentLocation
     {
-        [Required]
+        // Zone and room are worked out from where the sensor sits in the deployment
+        // tree, so they are blank until it has been placed there.
         public string Zone { get; set; } = string.Empty;
 
-        [Required]
         public string Room { get; set; } = string.Empty;
 
         [Required]

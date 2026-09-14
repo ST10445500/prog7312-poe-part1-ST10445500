@@ -52,6 +52,9 @@ namespace SmartX.Api.Services
         public void SeedFromFleet(IEnumerable<SensorRegistration> sensors)
         {
             var zones = sensors
+                // A sensor registered with only a name has no zone to group under,
+                // and grouping on a blank one would build a nameless node.
+                .Where(sensor => !string.IsNullOrWhiteSpace(sensor.Location.Zone))
                 .GroupBy(sensor => sensor.Location.Zone)
                 .Select(zone => new DeploymentNode
                 {
@@ -92,6 +95,50 @@ namespace SmartX.Api.Services
                 var room = ChildNamed(zone, sensor.Location.Room);
 
                 room.Children.Add(SensorLeaf(sensor));
+            }
+        }
+
+        //..............................................................................//
+
+        //records against each placed sensor the zone and room the tree has it under
+        public void ApplyLocationsTo(SensorStore sensors)
+        {
+            lock (_lock)
+            {
+                // The tree is what says where a sensor is. Its registration carries a
+                // zone and room because the brief asks a registration to, so they are
+                // worked out from the tree rather than typed and left to go stale.
+                // The walk starts at the root's children, because the root is the
+                // gateway itself rather than a level of the building.
+                foreach (var child in _root.Children)
+                {
+                    ApplyLocations(child, new List<string>(), sensors);
+                }
+            }
+        }
+
+        //..............................................................................//
+
+        //walks down to each sensor carrying the names of the levels above it
+        private static void ApplyLocations(DeploymentNode node, List<string> ancestors, SensorStore sensors)
+        {
+            if (node.IsSensor)
+            {
+                // The first level under the root is the zone and the one directly above
+                // the sensor is the room. Anything in between is dropped, which loses a
+                // label but never structure, since the tree keeps that.
+                var zone = ancestors.Count > 0 ? ancestors[0] : string.Empty;
+                var room = ancestors.Count > 0 ? ancestors[^1] : string.Empty;
+
+                sensors.SetLocation(node.SensorMacAddress!, zone, room);
+                return;
+            }
+
+            var deeper = new List<string>(ancestors) { node.Name };
+
+            foreach (var child in node.Children)
+            {
+                ApplyLocations(child, deeper, sensors);
             }
         }
 
